@@ -3,11 +3,13 @@
 GTEXDIR=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/GenotypeFiles/
 KGVCF=/storage/resources/datasets/1000Genomes/ALL.chip.omni_broad_sanger_combined.20140818.snps.genotypes.vcf.gz
 VCFFILE=${GTEXDIR}/phg000520.v2.GTEx_MidPoint_WGS_SNP_CNV.genotype-calls-vcf.c1/GTEx_Analysis_20150112_WholeGenomeSeq_148Indiv_GATK_HaplotypeCaller.vcf.gz
-PREFIX=GTEx_wgs
-PREFIX2=1000G_omni
 SAMPLEFILE=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/PhenotypeFiles/phs000424.v6.pht002742.v6.p1.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
 MINMAF=0.05
-ALLPREFIX=GTEx_1KG_merged
+
+OUTDIR=/storage/mgymrek/gtex/genotypePCA/
+ALLPREFIX=${OUTDIR}/GTEx_1KG_merged
+PREFIX=${OUTDIR}/GTEx_wgs
+PREFIX2=${OUTDIR}/1000G_omni
 
 # Convert VCF to ped format
 vcftools --gzvcf ${VCFFILE} --plink --out ${PREFIX} --remove-indels --remove-filtered-all --maf ${MINMAF}
