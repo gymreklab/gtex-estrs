@@ -60,3 +60,6 @@ smartpca.perl \
     -p ${ALLPREFIX}.plot \
     -l ${ALLPREFIX}.log
 
+# Remove intermediate files
+rm ${PREFIX}*
+rm ${PREFIX2}*
