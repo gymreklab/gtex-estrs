@@ -1,0 +1,26 @@
+
+1- from sra_run_table
+	We retrieve all RNA-Seq data --> Sra_table_RNA-Seq_only
+		zcat SraRunTable.txt.gz | grep "RNA-Seq" >  Sra_table_RNA-Seq_only
+
+2- Retrieve all Sample Ids from the rpkm file (From header) ----->Expression_Sample_All_tissue_ID 
+
+
+3- To find out how many Tissue type we have in the database  we call column $21 in Sra_RNA-Seq_only file
+	Then we extract all unique names -----> Tissue_type
+	
+4- We can retrieve all data pertaining to each tissue type with a grep
+	For each tissue type we do
+	grep "Tissue_type" Sra_RNA-Seq_only | grep "GTEX" > /projects/GTEX_eSTRs/data/RNA-Seq/TissueType
+
+5- We use the code in scratch (get_rpkm_by_tissue.py) which uses the files
+	header_wgs: This file has the IDs (GTEX-YYYY) of all WGS samples
+        files in /projects/GTEX_eSTRs/data/RNA-Seq/ (created in step 4)****
+ 	The rpkm file in  /storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/ExpressionFiles/phe000006.v2.GTEx_RNAseq.expression-data-matrixfmt.c1/GTEx_Data_20150112_RNAseq_RNASeQCv1.1.8_gene_rpkm.gct.gz
+
+   To get the rpkm by sample by tissue in /storage/szfeupe/data/RNA-Seq/Tissuefilenames
+
+
+
+
+

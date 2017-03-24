@@ -1,0 +1,27 @@
+
+
+# We had to transpose the expression table (obtaing from the expression regressed on covariates
+#	Each row represent indiv sample and each column is the Expr value for a gene
+
+cat  /home/szfeupe/projects/GTEX_eSTRs/data/Lin_Reg/resid_output_file.csv | sed 's/^GTEX/x,GTEX/' | datamash transpose -t',' | sed 's/^x,//' > Transposed_Expresstion
+
+
+# The Normalized genotypes were obtained by running "GetNormalizedGenotypes.py" on the genotypes 
+#	Note that the input is output of HipSTR
+
+python GetNormalizedGenotypes.py --vcf /storage/szfeupe/Runs/GTEx_estr/str_chr1.vcf.gz --minsamples 40 --minmaf 0.05 --out Norm_genotypes_chr1
+
+
+# Run the linear regression
+#	Without permute
+
+nohup python LinRegAssociationTest.py --expr ../data/Lin_Reg/Expression.csv --chrom 1 --exprannot ../data/Lin_Reg/Gene_Exp_Annotation.txt --strgt Norm_genotypes_chr1 --distfromgene 100000 --norm --out Lin_Reg_Out --tmpdir TMP > loglinreg &
+
+
+#	With permute
+
+nohup python LinRegAssociationTest.py --expr ../data/Lin_Reg/Expression.csv --chrom 1 --exprannot ../data/Lin_Reg/Gene_Exp_Annotation.txt --strgt Norm_genotypes_chr1 --distfromgene 100000 --norm --permute --out Lin_Reg_Permute_Out --tmpdir TMP > log_linReg &
+
+
+
+

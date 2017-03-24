@@ -1,0 +1,59 @@
+###This file was reproduced from Melissa G.GenerateResidualExpressionMatrix 
+
+R
+
+#1 load expression data matrix from the get_peer_confounder.r
+#	Let's call it blood_expression.tsv
+
+Expr <- read.table('blood_expression.tsv', sep='\t', header=TRUE)
+
+#	Check header and rownames 
+#	Basically you want rownames(Expr) to be the ENSGxxxx ids and colnames(Expr) to be the Ids of samples GTEXyyyyy
+#	if not change it like so [eg. rownames(Expr) <- Expr$GeneIDs and then Expr$GeneIDs = NULL ]
+
+#2 load covariates matrix basically this is a table where the row are the indiv in the study
+#	columns are the first 15 peer factors, follow by the first 3 PCs and Age and gender add population label
+
+covariates <- read.table('Cov_15peer_3pc_file', sep=" ", header=TRUE)
+
+#	The we format the get the rownames be the sample IDs or names
+
+rownames(covariates) <- covariates$V1
+covariates$V1 = NULL
+
+
+#3 remove effect of covariates on expression data
+#	Function that generate the Hat Matrix 
+
+HatMatrix <- function(c){ return (c %*% solve(t(c) %*% c) %*% t(c))}
+
+#	Function that generates the residuals matrix
+ GenerateResidual <- function(h,y){ return((diag(nrow(h)) - h) %*% y)}
+
+#	We want to transpose expression matrix to get samples in rows
+
+Y <- data.matrix(t(Expr))
+dim(Y)
+
+# Let's transform covariate to matric and call it C
+
+C <- data.matrix(covariates)
+dim(C)
+
+#	Let's get the Hat matrix
+H <- HatMatrix(C)
+dim(H)
+
+#	Let's get the Y.tilde 
+Y.title <- GenerateResidual(H,Y)
+dim(Y.title)
+
+#	Remove population covariates in our case, age and sex as there are many missing data
+
+C.nopop <- C[,-age]
+H.nopop <- HatMatrix(C.nopop)
+Y.tilde.nopop <- GenerateResidual(H.nopop, Y)
+
+#4 We can do some sanity check by plotting Y.tilde by population and by age and compare with the plot of Y.tilde.nopop plot 
+
+

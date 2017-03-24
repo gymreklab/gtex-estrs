@@ -1,0 +1,36 @@
+###############################
+######################################
+
+1- Get the Sraruntable file which contains all information ablut the data available for this project.
+This file was obtained by Mellissa (PI) from dbgap
+
+We want to retrieve all whole genome sequencing runs (WGS) data from the dataset
+
+	zcat SraRunTable.txt.gz | grep WGS > Sra_table_WGS_only
+ try		less -S Sra_table_WGS_only
+
+Observation : Column 15 has an "SRR" number, which is an SRA identifier that can be used to download the sra file.
+We can remove all SRR into a file.. Here we named it SRR_IDs_table_Sra_WGS_only
+
+	awk '{print $15}' Sra_table_WGS_only > SRR_IDs_table_Sra_WGS_only
+
+Each ID (SRR#######) from this file can be used to download the corresponding whole genome as so.
+From the dbgap folder, we can run the following command. As a prerequisite, the path to the key should be in your path.
+All of this is done during the environment set up for dbgap data.
+
+	prefetch --max-size 100G SRR##ID##
+
+Once the SRR##ID##.sra file is downloaded, we convert it to BAM
+
+	sam-dump -u sra/SRR##ID##.sra | samtools view -bS - > SRR##ID##.bam	
+
+We index the BAM file 
+
+	samtools index SRR##ID##.bam
+
+Now the BAM files are ready for analysis. Because all this take so much space, deleting the SRR####.sra is perfect for space saving
+
+##################################################
+##### Copy run.sh in the dbgap-xxxx directory. The file download_sra_2_bam.sh should be present as well
+#############################################################
+
