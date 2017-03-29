@@ -15,7 +15,7 @@ zgrep -v '^#' /storage/szfeupe/data/gencode.v19.annotation.gtf.gz | awk '$3 == "
 sed 's/"//' Genehg19.annot.expr.txt > tmp
 sed 's/;//' tmp1 > Genehg19.annot.expr.txt
 
-4- Then we can get our well formattes Expression annotation file with only 
+4- Then we can get a well formatted Expression annotation file with only 
 genes that are present in the expression file and in that same order
 
   awk -F, 'FNR==NR {a[$4]=$0; next}; $1 in a {print a[$1]}' Genehg19.annot.expr.txt ids.txt > Tissuename_Expr_annot.txt
