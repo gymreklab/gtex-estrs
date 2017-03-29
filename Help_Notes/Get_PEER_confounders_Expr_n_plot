@@ -1,0 +1,38 @@
+STR_CALLS = /storage/szfeupe/Runs/GTEx_estr/HipSTR_OUT/str_calls_chr1.vcf.gz
+STUTTERS = /storage/szfeupe/Runs/GTEx_estr/HipSTR_OUT/stutter_models_chr1.txt
+ANNOT = /storage/szfeupe/data/gencode.v19.annotation.gtf.gz
+
+
+We used gencode v19 annotation to select protein coding genes in expression data
+
+1- from gencode file we retrieve only protein coding gene ID ($10) and remove duplicate with ‘uniq’
+
+zcat $ANNOT | grep "protein_coding" | awk '{print $10}' | uniq | less -S
+
+1**- We can throw in the actual gene name $18 and gene type can be found on $14 or the status (known or novel) $22
+#############This operation reduce the number of genes in expression data from 56318 to 19660
+
+2- Reformat the protein_coding_IDs file by removing the special characters like “,”,and ;
+
+sed 's/;//' protein_coding_IDs >protein_coding
+sed 's/"//' protein_coding >protein_coding_IDs
+sed 's/"//' protein_coding_IDs >protein_coding
+mv protein_coding protein_coding_IDs
+
+3-  SANITY CHECK ON HipSTR OUTPUT
+
+I used vcftools —-site-depth and —-site-mean-depth to get the mean depth per site and plot it with R
+Then 
+
+## Get mean depth per call from vcf
+
+system("vcftools --site-mean-depth --gzvcf $STR_CALLS --out Depth")
+
+system("vcftools --site-depth --gzvcf $STR_CALLS  --out Depth")
+
+## Get distribution of step size for out-of-frame changes and repeat number
+
+system("awk '{print $4"\t"$10"\t"$5"\t"$6}' $STUTTERS > step_by_repeat")
+ 
+#Then run sanity_check_plot.r make sure the paths are correct
+

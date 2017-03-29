@@ -1,0 +1,23 @@
+1- Remove genes Ids from the Expression data
+ awk '{print $1}' Tissuename_expression.tsv >ids ##In this case Tissuename_ is wholeblood
+
+2- remove unwanted characters (quotes, and ;)
+ sed 's/;//' ids > tmp
+ sed 's/"//' tmp > ids
+
+3- We alredy removed all gene from the gencode annotation version 19
+	and formatted it to the EXPRANNOT format (Melissa)
+		with this commands
+**
+zgrep -v '^#' /storage/szfeupe/data/gencode.v19.annotation.gtf.gz | awk '$3 == "gene" {print $1","$4","$5","$10","$7","$1","$4","$5","$12","$7}' > Genehg19.annot.expr.txt
+
+** Then remove unwanted char ; " and "
+sed 's/"//' Genehg19.annot.expr.txt > tmp
+sed 's/;//' tmp1 > Genehg19.annot.expr.txt
+
+4- Then we can get a well formatted Expression annotation file with only 
+genes that are present in the expression file and in that same order
+
+  awk -F, 'FNR==NR {a[$4]=$0; next}; $1 in a {print a[$1]}' Genehg19.annot.expr.txt ids.txt > Tissuename_Expr_annot.txt
+
+
