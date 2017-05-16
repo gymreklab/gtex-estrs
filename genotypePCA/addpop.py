@@ -26,7 +26,7 @@ with gzip.open(sampfile, "r") as f:
         if line.startswith("#"): continue
         if line.strip() == "": continue
         if line.startswith("dbGaP_Subject_ID"): continue
-        items = line.strip().split()
+        items = line.strip().split("\t")
         try:
             sample = items[1]
             pop = int(items[5])
