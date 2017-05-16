@@ -3,6 +3,8 @@
 ########USAGE
 #./plot_pcs pcfile1 pcfile2
 #pcfile2 is optional . The file have at least 3 columns (PC1,PC2,PCC) PCC=population label
+#	PCs file source is /storage/mgymrek/gtex/genotypePCA//GTEx_1KG_merged.pca.evec
+
 
 ########This section may be commented to enter file within the code on args[1] alone or with args[2]
 #Capture one or 2 files with PCAs

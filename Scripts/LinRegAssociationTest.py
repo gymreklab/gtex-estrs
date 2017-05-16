@@ -25,6 +25,7 @@ def PROGRESS(msg):
 def ZNorm(vals):
     m = np.mean(vals)
     sd = math.sqrt(np.var(vals))
+#    print m, '  ', sd
     if sd == 0: return None
     return [(item-m)/sd for item in vals]
 
@@ -32,17 +33,18 @@ def LinearRegression(X, Y, norm=False):
     """
     Perform linear regression, return beta, beta_se, p
     """
+#    print 'This is X \t', X, type(X)
+#    print 'And this Y\t', Y, type(Y)
     if norm:
         X = ZNorm(X)
         Y = ZNorm(Y)
         if X is None or Y is None: return None, None, None
+        if np.var(X)==0: return None, None, None
     X = sm.add_constant(X)
-#    print X
-#    print Y
     mod_ols = sm.OLS(Y, X)
     res_ols = mod_ols.fit()
     pval = res_ols.pvalues[1]
-#    print 'P-value: ', pval 
+    print 'P-value: ', pval 
     slope = res_ols.params[1]
     err = res_ols.bse[1]
 #    print 'slope: ', slope, ' Err: ', err
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     if "Unnamed: 0" in expr.columns:
 	expr.index = expr["Unnamed: 0"].values
     	expr = expr.drop("Unnamed: 0", 1)
-#    print expr.columns
+#    print expr
 
     # Load expression annotation
     PROGRESS("Load annotation")
@@ -99,21 +101,27 @@ if __name__ == "__main__":
 #    print expr_annot.head(), '2'
 #    print expr_annot.columns, '2'
     expr_annot = expr_annot.loc[[item for item in expr.columns if item in expr_annot.index],:]
-    print expr_annot.head(), '3'
+#    print expr_annot.head(), '3'
     expr_annot = expr_annot[expr_annot["gene.chr"] == CHROM]
-    print expr_annot.head(),'4'
+#    print expr_annot.head(),'4'
     # Load STR genotypes
     PROGRESS("Load STRs")
     strgt = pd.read_csv(STRGTFILE, sep="\t")
-    print strgt.head()
+#    print strgt.head()
     # Restrict to STR samples
     str_samples = list(set(strgt.columns[2:].values))
 #    print expr_annot.head()
 
+#    print len(str_samples), expr.shape
+    samples_to_remove = []
     for item in str_samples:
-        if item not in expr.index: str_samples.remove(item)
+        if item not in expr.index: samples_to_remove.append(item) #str_samples.remove(item)
+    for item in samples_to_remove: str_samples.remove(item)
     expr = expr.loc[str_samples,:]
+#    print len(str_samples), '   ', expr.shape
 
+
+#    print expr
     f = open(OUTFILE, "w")
     f.write("\t".join(["gene","chrom","str.id","str.start","n.miss","allele1.dummy","allele2.dummy","af.dummy","beta","beta.se","lambda.remel","p.wald"])+"\n")
     # For each gene:
@@ -130,6 +138,7 @@ if __name__ == "__main__":
         y = pd.DataFrame({"expr":list(expr.loc[:, gene])})
         y.index = str_samples
 #	print cis_strs
+#	print y
         for j in range(cis_strs.shape[0]):
             # Get STR data
             locus_str = cis_strs.iloc[[j],:][str_samples].transpose()
@@ -139,6 +148,7 @@ if __name__ == "__main__":
             # Get subsets
             locus_str = locus_str.loc[samples_to_keep,:]
             locus_y = y.loc[samples_to_keep,:]
+            print locus_str
             # Run regression
 #           print ' Regression', gene
             beta, beta_se, p = LinearRegression(map(float,locus_str.iloc[:,0].values), locus_y["expr"].values, norm=NORM)
