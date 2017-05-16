@@ -18,6 +18,7 @@ TMPDIR = "/tmp/"
 CHECKCHROM = False
 PERMUTE_EXPR = False
 DEBUG = False
+MINSAMPLES = 0
 
 def PROGRESS(msg):
     sys.stderr.write("%s\n"%msg.strip())
@@ -29,7 +30,7 @@ def ZNorm(vals):
     if sd == 0: return None
     return [(item-m)/sd for item in vals]
 
-def LinearRegression(X, Y, norm=False):
+def LinearRegression(X, Y, norm=False, minsamples=0):
     """
     Perform linear regression, return beta, beta_se, p
     """
@@ -40,6 +41,7 @@ def LinearRegression(X, Y, norm=False):
         Y = ZNorm(Y)
         if X is None or Y is None: return None, None, None
         if np.var(X)==0: return None, None, None
+        if len(X) <= minsamples: return None, None, None
     X = sm.add_constant(X)
     mod_ols = sm.OLS(Y, X)
     res_ols = mod_ols.fit()
@@ -63,6 +65,7 @@ if __name__ == "__main__":
     parser.add_argument("--tmpdir", help="Tmp directory", type=str)
     parser.add_argument("--permute", help="Permute expression values", action="store_true")
     parser.add_argument("--norm", help="Normalize genotypes before doing association", action="store_true")
+    parser.add_argument("--min-samples", help="Require data for this many samples", type=int, default=0)
     parser.add_argument("--debug", help="Print debug info", action="store_true")
     args = parser.parse_args()
     EXPRFILE = args.expr
@@ -73,6 +76,7 @@ if __name__ == "__main__":
     STRGTFILE = args.strgt
     OUTFILE = args.out
     NORM = args.norm
+    MINSAMPLES = args.min_samples
     if args.scriptdir is not None: SCRIPTDIR = args.scriptdir
     if args.checkchrom: CHECKCHROM = True
     if args.tmpdir is not None: TMPDIR = args.tmpdir
@@ -151,7 +155,7 @@ if __name__ == "__main__":
             print locus_str
             # Run regression
 #           print ' Regression', gene
-            beta, beta_se, p = LinearRegression(map(float,locus_str.iloc[:,0].values), locus_y["expr"].values, norm=NORM)
+            beta, beta_se, p = LinearRegression(map(float,locus_str.iloc[:,0].values), locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)
 #	    print 'Pvalue: ', p
             # Write output
             if beta is not None:
