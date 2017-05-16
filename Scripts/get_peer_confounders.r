@@ -11,38 +11,45 @@ library(impute)
 ##DEFAULT is WHoleBlood
 
 #Get argument
-if (length(args)==0) 
-{  expr_set<- read.table('/storage/szfeupe/data/Expression_by_Tissue/Whole-Blood_rpkm', sep=" ", header=FALSE)  } 
-else if (length(args)==1) 
-{ expr_set <- read.table(args[1], sep=" ", header=FALSE)	}
+if (length(args)==0) {
+  expr_st<- read.table('/storage/szfeupe/data/Expression_by_Tissue/Whole-Blood_rpkm', sep=" ", header=FALSE)  
+} else if (length(args)==1) { 
+  expr_st <- read.table(args[1], sep=" ", header=TRUE)	
+}
+
 
 # Set input
-dim(expr_set)
-expr_set$V1 = NULL
+dim(expr_st)
+#expr_st$V1 = NULL
 
 #Remove rows of mean 0 values
-expr_set <- expr_s[rowSums(expr_s[, -1] > 0) != 0, ]
+expr_set <- expr_st[rowSums(expr_st[, -1] > 0) != 0, ]
+dim(expr_set)
 
 #saving the table for EXPRANNOT
 write.table(expr_set, file="Clean_expression.tsv", sep="\t")
 
 #Observing the data
 ids = expr_set$V1
-write.table(ids, file="Clean_Exp_table/ids")
-#rownames(expr_set) <-expr_set$V1
+write.table(ids, file="Ids.txt")
+#rownames(expr_set) <-expr_set$GeneID
 expr_set$GeneID = NULL
 dim(expr_set)
 
 #set K
-k = ncol(expr_set) * .25
+k=15	#k = ncol(expr_set) * .20
 model = PEER()
 
 # set number of “hidden factors” searched for
 PEER_setNk(model,k)
+message("Number of factors ... ",k)
 
 #PEER ask NxG matrix, where N=samples and G=genes
 PEER_setPhenoMean(model, t(as.matrix(expr_set)))
 PEER_setAdd_mean(model, TRUE)
+message("Number of factors ... ",k)
+
+
 
 # These can be changed to the tolerance you desire
 PEER_setTolerance(model, .001)
