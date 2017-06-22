@@ -1,0 +1,7 @@
+Asian
+AfricanAmerican
+European
+Amerindian
+NotReported
+Unknown
+

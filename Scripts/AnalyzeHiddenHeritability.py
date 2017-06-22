@@ -143,6 +143,9 @@ if __name__ == "__main__":
             locus_str.index = str_samples
             locus_str.columns = ["STR_%s"%(cis_strs["start"].values[i])]
             locus_snp = cis_snps[str_samples].transpose()
+            if len(locus_snp.columns) == 0:
+                PROGRESS("Skipping %s, no SNP data."%ensgene, printit=DEBUG)
+                continue
             # Get subsets
             samples_to_keep = [str_samples[k] for k in range(len(str_samples)) \
                                if (str(locus_str.iloc[:,0].values[k]) != "None" \
