@@ -189,4 +189,3 @@ if __name__ == "__main__":
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, 0, str_rsq, -1, estr_fdr, -1,\
                                              0, 0]))
-                
