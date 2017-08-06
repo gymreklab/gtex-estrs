@@ -41,13 +41,8 @@ if __name__ == "__main__":
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--nohead", help="Don't print header", action="store_true")
-    parser.add_argument("--out", help="Output file", type=str)
     parser.add_argument("--debug", help="Print debug status messages", action="store_true")
     args = parser.parse_args()
-    if args.out is None:
-        sys.stderr.write("ERROR: Must specify output file --out\n")
-        sys.exit(1)
-
     ESTR_RESULTS_FILE = args.estrs
     ESNP_RESULTS_FILE = args.esnps
     SNP_FDR_METHOD = args.snp_fdr_method
@@ -56,7 +51,6 @@ if __name__ == "__main__":
     STR_FDR_THRESHOLD = args.str_fdr_threshold
     EXPRFILE = args.expr
     EXPRANNOTFILE = args.exprannot
-    OUTFILE = args.out
     CHROM = args.chrom
     if "chr" not in str(CHROM): CHROM="chr%s"%CHROM
     STRGTFILE = args.strgt
@@ -101,8 +95,7 @@ if __name__ == "__main__":
     # Print output header
     if not NOHEAD:
         print ",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic"])
-    out = open(OUTFILE, "w")
-    out.write(",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic"])+'\n')
+
     # For each gene in results:
     # Pull out passing eSNPs and eSTRs
     # Build STR, SNP, and SNPSTR model
@@ -126,6 +119,7 @@ if __name__ == "__main__":
     
     allgenes = set(estr_results['gene'])          #set(estr_results["gene"].values)
     for ensgene in allgenes:
+        #print ensgene, esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD]
         estr_fdr = min(estr_results[estr_results["gene"]==ensgene][STR_FDR_METHOD])
         esnp_fdr = min(esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD])
         probes = expr_annot[expr_annot["gene.id"]==ensgene]["probe.id"].values
@@ -150,6 +144,9 @@ if __name__ == "__main__":
             locus_str.index = str_samples
             locus_str.columns = ["STR_%s"%(cis_strs["start"].values[i])]
             locus_snp = cis_snps[str_samples].transpose()
+            if len(locus_snp.columns) == 0:
+                PROGRESS("Skipping %s, no SNP data."%ensgene, printit=DEBUG)
+                continue
             # Get subsets
             samples_to_keep = [str_samples[k] for k in range(len(str_samples)) \
                                if (str(locus_str.iloc[:,0].values[k]) != "None" \
@@ -186,19 +183,10 @@ if __name__ == "__main__":
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, snp_rsq, snpstr_rsq, pval, estr_fdr, esnp_fdr,\
                                              bic_snp-bic_snpstr, aic_snp-aic_snpstr]))
-		out.write(",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
-                                              locus_y.shape[0], str_rsq, snp_rsq, snpstr_rsq, pval, estr_fdr, esnp_fdr,\
-                                             bic_snp-bic_snpstr, aic_snp-aic_snpstr]))+'\n')
-
             else:
                 formula_str = "expr ~ STR"
                 lm_str = ols(formula_str, genedata).fit()
                 str_rsq = lm_str.rsquared
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, 0, str_rsq, -1, estr_fdr, -1,\
-                                             0, 0]))                
-		out.write(",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
-                                              locus_y.shape[0], str_rsq, 0, str_rsq, -1, estr_fdr, -1,\
-                                             0, 0]))+'\n')
-out.close()
-
+                                             0, 0]))
