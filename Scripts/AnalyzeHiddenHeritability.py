@@ -1,4 +1,4 @@
-#!/usr/local/bin/python2.7
+#!/usr/bin/env python2.7
 
 import argparse
 import math
@@ -15,17 +15,16 @@ Analyze h2 gain in adding eSTRs vs. eSNPs
 
 def ZNorm(vals):
     vals = list(vals)
-    #print vals
     vals = [float(x) for x in vals]
     m = np.mean(vals)
     sd = math.sqrt(np.var(vals))
-    print m,'=============', sd
     if sd == 0: return None
     return [(item-m)*1.0/sd for item in vals]
 
 def PROGRESS(msg, printit=True):
     if printit: # false for some messages when not in debug mode
         sys.stderr.write("%s\n"%msg.strip())
+
 DISTFROMGENE = 100000
 
 if __name__ == "__main__":
@@ -42,8 +41,13 @@ if __name__ == "__main__":
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--nohead", help="Don't print header", action="store_true")
+    parser.add_argument("--out", help="Output file", type=str)
     parser.add_argument("--debug", help="Print debug status messages", action="store_true")
     args = parser.parse_args()
+    if args.out is None:
+        sys.stderr.write("ERROR: Must specify output file --out\n")
+        sys.exit(1)
+
     ESTR_RESULTS_FILE = args.estrs
     ESNP_RESULTS_FILE = args.esnps
     SNP_FDR_METHOD = args.snp_fdr_method
@@ -52,6 +56,7 @@ if __name__ == "__main__":
     STR_FDR_THRESHOLD = args.str_fdr_threshold
     EXPRFILE = args.expr
     EXPRANNOTFILE = args.exprannot
+    OUTFILE = args.out
     CHROM = args.chrom
     if "chr" not in str(CHROM): CHROM="chr%s"%CHROM
     STRGTFILE = args.strgt
@@ -62,7 +67,6 @@ if __name__ == "__main__":
     # Load expression and annotation
     PROGRESS("Load expression", printit=DEBUG)
     expr = pd.read_csv(EXPRFILE)
-    print expr.shape
 #    expr.index = expr["Unnamed: 0"].values
 #    expr = expr.drop("Unnamed: 0", 1)
     PROGRESS("Load annotation", printit=DEBUG)
@@ -70,20 +74,20 @@ if __name__ == "__main__":
     expr_annot.index = expr_annot["probe.id"].values
     expr_annot = expr_annot.loc[expr.columns[map(lambda x: x in expr_annot.index, expr.columns)],:]
     expr_annot = expr_annot[expr_annot["gene.chr"] == CHROM]
-    print expr_annot.shape
     
     # Load SNP genotypes
     PROGRESS("Load SNPs", printit=DEBUG)
     snpgt = pd.read_csv(SNPGTFILE, sep="\t")
-    print snpgt.shape
 
     # Load STR genotypes
     PROGRESS("Load STRs", printit=DEBUG)
     strgt = pd.read_csv(STRGTFILE, sep="\t")
-    print strgt.shape
 
-    # Restrict to STR samples
-    str_samples = list(set(strgt.columns[2:].values).intersection(set(snpgt.columns[2:].values)))
+    # Restrict to samples with data in all three (SNP, STR, expression)
+    in_str_samples = set(strgt.columns[2:].values)
+    in_snp_samples = set(snpgt.columns[2:].values)
+    in_expr_samples = set(expr.index)
+    str_samples = list(in_str_samples.intersection(in_snp_samples).intersection(in_expr_samples))
     expr = expr.loc[str_samples,:]
     snpgt = snpgt[["chrom","start"] + str_samples]
     strgt = strgt[["chrom","start"] + str_samples]
@@ -92,28 +96,29 @@ if __name__ == "__main__":
     PROGRESS("Load eQTL results", printit=DEBUG)
     estr_results = pd.read_csv(ESTR_RESULTS_FILE, sep="\t")
     esnp_results = pd.read_csv(ESNP_RESULTS_FILE, sep="\t")
-    print 'eqtl outputs loaded ', estr_results.shape, '\t',esnp_results.shape
+    if DEBUG: print 'eqtl outputs loaded ', estr_results.shape, '\t',esnp_results.shape
 
     # Print output header
     if not NOHEAD:
         print ",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic"])
-
+    out = open(OUTFILE, "w")
+    out.write(",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic"])+'\n')
     # For each gene in results:
     # Pull out passing eSNPs and eSTRs
     # Build STR, SNP, and SNPSTR model
     # Get r2 for each model and run Anova + BIC
-    print CHROM,'---fdr-method----', STR_FDR_METHOD, '---treshold---',STR_FDR_THRESHOLD 
+    if DEBUG: print CHROM,'---fdr-method----', STR_FDR_METHOD, '---treshold---',STR_FDR_THRESHOLD 
     
     estr_results = estr_results[(estr_results["chrom"]==CHROM) & (estr_results[STR_FDR_METHOD]<=STR_FDR_THRESHOLD)]
-    print estr_results.columns
+    if DEBUG: print estr_results.columns
     
     if STR_FDR_METHOD == "qval.gene":
         estr_results = estr_results[estr_results["best_str"]==1]
-        print estr_results.columns,'*******\n'
+        if DEBUG: print estr_results.columns,'*******\n'
         
         
     esnp_results = esnp_results[(esnp_results["chrom"]==CHROM) & (esnp_results[SNP_FDR_METHOD]<=SNP_FDR_THRESHOLD)]
-    print esnp_results.shape , '------\n', esnp_results.columns
+    if DEBUG: print esnp_results.shape , '------\n', esnp_results.columns
     
     
     if SNP_FDR_METHOD == "qval.gene":
@@ -140,23 +145,23 @@ if __name__ == "__main__":
         cis_strs = strgt[strgt["start"].apply(lambda x: x in list(estrs["str.start"].values))]
         # Run one analysis per STR
         for i in range(cis_strs.shape[0]):
-            # Get STR data
+            # Get STR and SNP data
             locus_str = cis_strs.iloc[[i],:][str_samples].transpose()
             locus_str.index = str_samples
             locus_str.columns = ["STR_%s"%(cis_strs["start"].values[i])]
-            samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if str(locus_str.iloc[:,0].values[k]) != "None"]
-            # Get subsets
-            locus_str = locus_str.loc[samples_to_keep,:]
             locus_snp = cis_snps[str_samples].transpose()
+            # Get subsets
+            samples_to_keep = [str_samples[k] for k in range(len(str_samples)) \
+                               if (str(locus_str.iloc[:,0].values[k]) != "None" \
+                                   and (str(locus_snp.iloc[:,0].values[k]) != "None"))]
+            locus_str = locus_str.loc[samples_to_keep,:]
+
             locus_snp = locus_snp.loc[samples_to_keep,:]
             locus_y = y.loc[samples_to_keep,:]
-            print ZNorm(locus_y["expr"].values), '\n znorm or expr itself?\n'
-            print locus_y["expr"].values
             # Get data frame with relevant variables
             d = {"STR": ZNorm(locus_str.iloc[:,0].apply(float).values), "expr": ZNorm(locus_y["expr"].values)}
             for k in range(locus_snp.shape[1]):
                 snps = ZNorm(locus_snp.iloc[:,k].values)
-                print snps
                 if snps is not None:
                     d["SNP%s"%k] = snps
             genedata = pd.DataFrame(d)
@@ -166,7 +171,6 @@ if __name__ == "__main__":
                 formula_snpstr = "expr ~ STR + " + snpstring
                 formula_snp = "expr ~ " + snpstring
                 formula_str = "expr ~ STR"
-                print genedata
                 lm_snpstr = ols(formula_snpstr, genedata).fit()
                 lm_snp = ols(formula_snp, genedata).fit()
                 lm_str = ols(formula_str, genedata).fit()
@@ -182,11 +186,19 @@ if __name__ == "__main__":
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, snp_rsq, snpstr_rsq, pval, estr_fdr, esnp_fdr,\
                                              bic_snp-bic_snpstr, aic_snp-aic_snpstr]))
+		out.write(",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
+                                              locus_y.shape[0], str_rsq, snp_rsq, snpstr_rsq, pval, estr_fdr, esnp_fdr,\
+                                             bic_snp-bic_snpstr, aic_snp-aic_snpstr]))+'\n')
+
             else:
                 formula_str = "expr ~ STR"
                 lm_str = ols(formula_str, genedata).fit()
                 str_rsq = lm_str.rsquared
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, 0, str_rsq, -1, estr_fdr, -1,\
-                                             0, 0]))
-                
+                                             0, 0]))                
+		out.write(",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
+                                              locus_y.shape[0], str_rsq, 0, str_rsq, -1, estr_fdr, -1,\
+                                             0, 0]))+'\n')
+out.close()
+

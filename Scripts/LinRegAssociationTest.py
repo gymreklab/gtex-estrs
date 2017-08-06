@@ -111,7 +111,8 @@ if __name__ == "__main__":
     # Load STR genotypes
     PROGRESS("Load STRs")
     strgt = pd.read_csv(STRGTFILE, sep="\t")
-#    print strgt.head()
+    print strgt.head()
+    strgt = strgt[strgt["chrom"] == CHROM]   ; print "Restrict to chrom"
     # Restrict to STR samples
     str_samples = list(set(strgt.columns[2:].values))
 #    print expr_annot.head()
@@ -123,7 +124,6 @@ if __name__ == "__main__":
     for item in samples_to_remove: str_samples.remove(item)
     expr = expr.loc[str_samples,:]
 #    print len(str_samples), '   ', expr.shape
-
 
 #    print expr
     f = open(OUTFILE, "w")
