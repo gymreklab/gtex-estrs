@@ -15,10 +15,12 @@ MINCOUNT = 1
 NORM = True
 COUNTFILTERS = False
 DEBUG = False
+FILTER = False
 
 def GetGT(gt):
+    #print gt
     if gt is None: return None
-    if str(gt) == ".": return None
+    if str(gt) == "." or str(gt) == "./.": return None #Missing genotype control
     if "|" in gt: return map(int, gt.split("|"))
     elif "/" in gt: return map(int, gt.split("/"))
     else: return [int(gt), int(gt)] # haploid
@@ -73,6 +75,7 @@ if __name__ == "__main__":
     parser.add_argument("--nonorm", help="Don't normalize genotypes, just return raw genotypes in a matrix.", action="store_true")
     parser.add_argument("--mincount", help="Don't return genotypes with less than this many occurrences", type=int)
     parser.add_argument("--alleles", help="Print allele1, allele2 rather than sum of alleles", action="store_true")
+    parser.add_argument("--filter", help="Only consider records that passed filters. FILTER is PASS", action="store_true")             ######    
     parser.add_argument("--countfilters", help="Just print out the number of loci filtered by each criteria", action="store_true")
     parser.add_argument("--debug", help="Print debug info", action="store_true")
     args = parser.parse_args()
@@ -94,6 +97,7 @@ if __name__ == "__main__":
     DEBUG = args.debug
     PRINT_ALLELES = args.alleles
     COUNTFILTERS = args.countfilters
+    if args.filter: FILTER=True             ######
 
     VCFFILE = args.vcf
     OUTFILE = args.out
@@ -112,32 +116,40 @@ if __name__ == "__main__":
     if not COUNTFILTERS:
         out = open(OUTFILE, "w")
         out.write("\t".join(["chrom","start"] + SAMPLES)+"\n")
+        
+        
     for record in vcf_reader:
-        if record.call_rate == 0: # otherwise pyvcf functions break
-            counters["minsamples"] = counters["minsamples"] + 1
-            continue
-        counters["numloci"] = counters["numloci"] + 1
-        maf = min([max(record.aaf), 1-max(record.aaf)])
-        if maf < MINMAF:
-            counters["minmaf"] = counters["minmaf"] + 1
-            continue
-        chrom = record.CHROM
-        if "chr" not in chrom: chrom = "chr%s"%chrom
-        pos = record.POS
-#	print pos
-        genotypes = [GetGT(record.genotype(s)[GTFIELD]) for s in SAMPLES]
-        if len([item for item in genotypes if item is not None]) < MINSAMPLES:
-            counters["minsamples"] = counters["minsamples"] + 1
-            continue
-        genotypes_norm = NormalizeGT(genotypes, NORM=NORM, PRINT_ALLELES=PRINT_ALLELES, MINCOUNT=MINCOUNT, COUNTFILTERS=COUNTFILTERS)
-        if genotypes_norm is None:
-            counters["novar"] = counters["novar"] + 1
-            if DEBUG: sys.stderr.write("Discarding %s:%s, no variation after processing\n"%(chrom, pos))
+        #print record.QUAL, ' ', record.FILTER, ' ', record.FORMAT
+        if (FILTER==True) and (record.FILTER != []):         # Filter variants that passed filters in vcf  
+            pass
         else:
-            if not COUNTFILTERS: out.write("\t".join(map(str,[chrom,pos]+genotypes_norm))+"\n")
-            counters["keepers"] = counters["keepers"] + 1
-        if counters["numloci"]%100 == 0: sys.stderr.write("%s\n"%counters)
-        if DEBUG and counters["numloci"]>100: break
+            print record.QUAL, '   ', record.FILTER, '   ', record.FORMAT
+            if record.call_rate == 0:       # otherwise pyvcf functions break
+                counters["minsamples"] = counters["minsamples"] + 1
+                continue
+            counters["numloci"] = counters["numloci"] + 1
+            maf = min([max(record.aaf), 1-max(record.aaf)])
+            if maf < MINMAF:
+                counters["minmaf"] = counters["minmaf"] + 1
+                continue
+            chrom = record.CHROM
+            if "chr" not in chrom: chrom = "chr%s"%chrom
+            pos = record.POS
+        #	print pos
+            genotypes = [GetGT(record.genotype(s)[GTFIELD]) for s in SAMPLES]
+            if len([item for item in genotypes if item is not None]) < MINSAMPLES:
+                counters["minsamples"] = counters["minsamples"] + 1
+                continue
+    #	print MINCOUNT, '\n', genotypes
+            genotypes_norm = NormalizeGT(genotypes, NORM=NORM, PRINT_ALLELES=PRINT_ALLELES, MINCOUNT=MINCOUNT, COUNTFILTERS=COUNTFILTERS)
+            if genotypes_norm is None:
+                counters["novar"] = counters["novar"] + 1
+                if DEBUG: sys.stderr.write("Discarding %s:%s, no variation after processing\n"%(chrom, pos))
+            else:
+                if not COUNTFILTERS: out.write("\t".join(map(str,[chrom,pos]+genotypes_norm))+"\n")
+                counters["keepers"] = counters["keepers"] + 1
+            if counters["numloci"]%100 == 0: sys.stderr.write("%s\n"%counters)
+            if DEBUG and counters["numloci"]>100: break
     if not COUNTFILTERS:
         out.close()
 
