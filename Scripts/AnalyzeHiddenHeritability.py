@@ -119,6 +119,7 @@ if __name__ == "__main__":
     
     allgenes = set(estr_results['gene'])          #set(estr_results["gene"].values)
     for ensgene in allgenes:
+        #print ensgene, esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD]
         estr_fdr = min(estr_results[estr_results["gene"]==ensgene][STR_FDR_METHOD])
         esnp_fdr = min(esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD])
         probes = expr_annot[expr_annot["gene.id"]==ensgene]["probe.id"].values
