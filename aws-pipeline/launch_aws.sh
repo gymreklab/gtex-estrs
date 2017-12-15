@@ -24,7 +24,7 @@ test -z ${KEYNAME} && usage
 # Instance details
 SPOT_PRICE=0.05
 INSTANCE_TYPE=c4.xlarge
-IMAGE_ID=ami-80861296 # TODO change
+IMAGE_ID=ami-d9cbbaa3
 
 STARTUP_SCRIPT=$(cat run_from_aws.sh | \
     sed "s/\$1/${AWS_ACCESS_KEY}/" | sed "s~\$2~${AWS_SECRET_KEY}~" | \

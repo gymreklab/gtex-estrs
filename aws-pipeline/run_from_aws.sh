@@ -35,7 +35,7 @@ terminate() {
     sudo aws s3 cp --output table /var/log/cloud-init-output.log ${OUTBUCKET}/log/${superbatch}.log
     # Terminate instance
     echo "Terminating instance ${INSTANCE_ID}"
-    sudo aws ec2 terminate-instances --output table --instance-ids ${INSTANCE_ID}
+#    sudo aws ec2 terminate-instances --output table --instance-ids ${INSTANCE_ID}
     exit 1 # shouldn't happen
 }
 
@@ -66,30 +66,25 @@ sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
 cd ${HOMEDIR}/source
 git clone https://github.com/gymreklab/gtex-estrs
 
-# Download all bam files to EBS storage - TODO
+# Download all bam files to EBS storage
+sudo mkdir -p /storage/gtex-data
 cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
-    # Download files using aspera TODO
-#    prefetch --max-size 200G ${sample}
-#    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
-#    samtools index wgs/${sample}.bam
-    echo $sample
-    sam-dump -u ${sample} --aligned-region 17:55776254-55776302 | samtools view -bS > wgs/${sample}.bam
+    # Download files using aspera
+    prefetch --max-size 200G ${sample}
+    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
     samtools index wgs/${sample}.bam
-done
-
-# Run HipSTR
-cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
-    ./run_hipstr_gtex_aws.sh ${superbatch}
-    # Upload result to S3
-    aws s3 cp /storage/vcfs/${superbatch}.vcf.gz ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz
-    aws s3 cp /storage/vcfs/${superbatch}.vcf.gz.tbi ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz.tbi
-    aws s3 cp /storage/vcfs/${superbatch}.log.txt ${OUTBUCKET}/${superbatch}_hipstr.log.txt
-    # Delete result and bam
-    rm -f wgs/${superbatch}*
-    rm -f sra/${superbatch}*
-    rm -f /storage/vcfs/${superbatch}*
+    # Run HipSTR
+    cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
+    ./run_hipstr_gtex_aws.sh ${sample}
+    aws s3 cp /storage/vcfs/${sample}.vcf.gz ${OUTBUCKET}/${sample}_hipstr.vcf.gz
+    aws s3 cp /storage/vcfs/${sample}.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
+    aws s3 cp /storage/vcfs/${sample}.log.txt ${OUTBUCKET}/${sample}_hipstr.log.txt
+    # Remove files
+    rm -rf sra/${sample}*
+    rm -rf wgs/${sample}*
+    rm -rf /storage/vcfs/${sample}*
 done
 
 terminate
