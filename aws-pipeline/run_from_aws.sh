@@ -79,8 +79,9 @@ do
     cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
     ./run_hipstr_gtex_aws.sh ${sample} 
     # Upload result to S3
-    aws s3 cp /storage/vcfs/${sample}_hipstr.vcf.gz ${OUTBUCKET}/${sample}_hipstr.vcf.gz
-    aws s3 cp /storage/vcfs/${sample}_hipstr.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
+    aws s3 cp /storage/vcfs/${sample}.vcf.gz ${OUTBUCKET}/${sample}_hipstr.vcf.gz
+    aws s3 cp /storage/vcfs/${sample}.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
+    aws s3 cp /storage/vcfs/${sample}.log.txt ${OUTBUCKET}/${sample}_hipstr.log.txt
     # Delete result and bam
     rm -f wgs/${sample}*
     rm -f /storage/vcfs/${sample}*
