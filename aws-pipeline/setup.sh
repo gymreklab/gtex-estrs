@@ -93,3 +93,7 @@ sudo chmod 777 /mnt/resources
 cd /mnt/resources/
 wget https://github.com/HipSTR-Tool/HipSTR-references/raw/master/human/GRCh37.hipstr_reference.bed.gz
 gunzip GRCh37.hipstr_reference.bed.gz
+
+# Get github for gtex project
+cd ${HOMEDIR}/source
+git clone https://github.com/gymreklab/gtex-estrs

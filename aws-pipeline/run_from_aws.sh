@@ -2,10 +2,7 @@
 
 SUPERBATCHPATH=$1
 
-HOMEDIR=/root/
-
 OUTBUCKET=s3://gtex-hipstr/vcfs/
-
 HOMEDIR=/root/
 
 superbatch=$(basename $SUPERBATCHPATH)
@@ -35,7 +32,7 @@ terminate() {
     sudo aws s3 cp --output table /var/log/cloud-init-output.log ${OUTBUCKET}/log/${superbatch}.log
     # Terminate instance
     echo "Terminating instance ${INSTANCE_ID}"
-#    sudo aws ec2 terminate-instances --output table --instance-ids ${INSTANCE_ID}
+#    sudo aws ec2 terminate-instances --output table --instance-ids ${INSTANCE_ID} # TODO put back
     exit 1 # shouldn't happen
 }
 
@@ -51,7 +48,7 @@ die()
 
 # Set of directories for inputs/outsputs on mounted EBS drive
 sudo mkfs -t ext4 /dev/xvdf
-sudo mkdir /storage
+sudo mkdir -p /storage
 sudo mount /dev/xvdf /storage/
 sudo chmod 777 /storage/
 
@@ -62,18 +59,25 @@ aws s3 cp ${SUPERBATCHPATH} /storage/tmp/superbatch.txt
 # Make directory for inputs/outputs
 sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
 
-# Get github for gtex project
-cd ${HOMEDIR}/source
-git clone https://github.com/gymreklab/gtex-estrs
+# Update github
+cd ${HOMEDIR}/source/gtex-estrs
+git pull
+
+aws s3 cp s3://gtex-hipstr/stutter_models_hg19.txt.gz /mnt/resources/stutter_logs_0928.txt.gz
+gunzip /mnt/resources/stutter_logs_0928.txt.gz
 
 # Download all bam files to EBS storage
 sudo mkdir -p /storage/gtex-data
+sudo mkdir -p /storage/gtex-data/wgs
+sudo mkdir -p /storage/gtex-data/sra
 cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
+    echo "processing $sample"
     # Download files using aspera
     prefetch --max-size 200G ${sample}
     sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
+#    sam-dump -u --aligned-region 11:2191318-2193345 ${sample} | samtools view -bS > wgs/${sample}.bam # TODO remove line
     samtools index wgs/${sample}.bam
     # Run HipSTR
     cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
