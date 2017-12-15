@@ -2,14 +2,13 @@
 
 source params.sh
 
-SAMPLE=$1
+BAMS=$(ls /storage/gtex-data/wgs/*.bam | awk '{print $0 ","}' | tr -d '\n' | sed s'/,$//')
 
 HipSTR \
-    --bams /storage/gtex-data/wgs/${SAMPLE}.bam \
+    --bams ${BAMS} \
     --fasta /mnt/resources/Homo_sapiens_assembly19.fasta \
     --regions /mnt/resources/GRCh37.hipstr_reference.bed \
-    --min-reads 10 \
-    --stutter-in /mnt/resources/stutter_logs_0928.txt \
+    --min-reads 50 \
     --str-vcf /storage/vcfs/${SAMPLE}.vcf.gz \
     --log /storage/vcfs/${SAMPLE}.log.txt
 tabix -p vcf /storage/vcfs/${SAMPLE}.vcf.gz

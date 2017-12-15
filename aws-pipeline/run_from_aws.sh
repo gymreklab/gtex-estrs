@@ -6,9 +6,9 @@ HOMEDIR=/root/
 
 OUTBUCKET=s3://gtex-hipstr/vcfs/
 
-superbatch=$(basename $SUPERBATCHPATH)
-
 HOMEDIR=/root/
+
+superbatch=$(basename $SUPERBATCHPATH)
 
 usage()
 {
@@ -66,25 +66,30 @@ sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
 cd ${HOMEDIR}/source
 git clone https://github.com/gymreklab/gtex-estrs
 
-# Run each job
-source ${HOMEDIR}/source/gtex-estrs/aws-pipeline/params.sh
+# Download all bam files to EBS storage - TODO
+cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
-    cd /storage/gtex-data/ # go to dbgap directory
-    # Download files using aspera
-    prefetch --max-size 200G ${sample}
-    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
+    # Download files using aspera TODO
+#    prefetch --max-size 200G ${sample}
+#    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
+#    samtools index wgs/${sample}.bam
+    echo $sample
+    sam-dump -u ${sample} --aligned-region 17:55776254-55776302 | samtools view -bS > wgs/${sample}.bam
     samtools index wgs/${sample}.bam
-    # Run HipSTR
-    cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
-    ./run_hipstr_gtex_aws.sh ${sample} 
+done
+
+# Run HipSTR - TODO
+cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
+    ./run_hipstr_gtex_aws.sh
     # Upload result to S3
-    aws s3 cp /storage/vcfs/${sample}.vcf.gz ${OUTBUCKET}/${sample}_hipstr.vcf.gz
-    aws s3 cp /storage/vcfs/${sample}.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
-    aws s3 cp /storage/vcfs/${sample}.log.txt ${OUTBUCKET}/${sample}_hipstr.log.txt
+    aws s3 cp /storage/vcfs/${superbatch}.vcf.gz ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz
+    aws s3 cp /storage/vcfs/${superbatch}.vcf.gz.tbi ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz.tbi
+    aws s3 cp /storage/vcfs/${superbatch}.log.txt ${OUTBUCKET}/${superbatch}_hipstr.log.txt
     # Delete result and bam
-    rm -f wgs/${sample}*
-    rm -f /storage/vcfs/${sample}*
+    rm -f wgs/${superbatch}*
+    rm -f sra/${superbatch}*
+    rm -f /storage/vcfs/${superbatch}*
 done
 
 terminate
