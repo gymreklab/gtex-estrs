@@ -79,9 +79,9 @@ do
     samtools index wgs/${sample}.bam
 done
 
-# Run HipSTR - TODO
+# Run HipSTR
 cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
-    ./run_hipstr_gtex_aws.sh
+    ./run_hipstr_gtex_aws.sh ${superbatch}
     # Upload result to S3
     aws s3 cp /storage/vcfs/${superbatch}.vcf.gz ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz
     aws s3 cp /storage/vcfs/${superbatch}.vcf.gz.tbi ${OUTBUCKET}/${superbatch}_hipstr.vcf.gz.tbi
