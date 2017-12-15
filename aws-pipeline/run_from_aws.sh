@@ -67,14 +67,23 @@ cd ${HOMEDIR}/source
 git clone https://github.com/gymreklab/gtex-estrs
 
 # Run each job
-source ${HOMEDIR}/gtex-estrs/aws-pipeline/paramas.sh
+source ${HOMEDIR}/source/gtex-estrs/aws-pipeline/params.sh
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
-    # Download files from dbgap - TODO
-    # Run HipSTR - TODO
-    sudo ./run_hipstr_gtex_aws.sh ${sample} 
-    # Upload resultto S3 - TODO
-    # Delete result - TODO
+    cd /storage/gtex-data/ # go to dbgap directory
+    # Download files using aspera
+    prefetch --max-size 200G ${sample}
+    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
+    samtools index wgs/${sample}.bam
+    # Run HipSTR
+    cd ${HOMEDIR}/source/gtex-estrs/aws-pipeline
+    ./run_hipstr_gtex_aws.sh ${sample} 
+    # Upload result to S3
+    aws s3 cp /storage/vcfs/${sample}_hipstr.vcf.gz ${OUTBUCKET}/${sample}_hipstr.vcf.gz
+    aws s3 cp /storage/vcfs/${sample}_hipstr.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
+    # Delete result and bam
+    rm -f wgs/${sample}*
+    rm -f /storage/vcfs/${sample}*
 done
 
 terminate
