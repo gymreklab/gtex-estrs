@@ -68,8 +68,9 @@ gunzip /mnt/resources/stutter_logs_0928.txt.gz
 
 # Download all bam files to EBS storage
 sudo mkdir -p /storage/gtex-data
-sudo mkdir -p /storage/gtex-data/wgs
-sudo mkdir -p /storage/gtex-data/sra
+sudo cp /root/dbgap/prj_12604.ngc /home/ubuntu/dbgap/
+vdb-config --import /home/ubuntu/dbgap/prj_12604.ngc /storage/gtex-data/
+
 cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
