@@ -2,7 +2,7 @@
 
 SUPERBATCHPATH=$1
 
-OUTBUCKET=s3://gtex-hipstr/vcfs/
+OUTBUCKET=s3://gtex-hipstr/vcfs
 HOMEDIR=/root/
 
 superbatch=$(basename $SUPERBATCHPATH)
@@ -63,9 +63,6 @@ sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
 cd ${HOMEDIR}/source/gtex-estrs
 git pull
 
-aws s3 cp s3://gtex-hipstr/stutter_models_hg19.txt.gz /mnt/resources/stutter_logs_0928.txt.gz
-gunzip /mnt/resources/stutter_logs_0928.txt.gz
-
 # Download all bam files to EBS storage
 sudo mkdir -p /storage/gtex-data
 sudo mkdir -p /storage/gtex-data/sra
@@ -74,9 +71,9 @@ mkdir -p /home/ubuntu/dbgap/
 sudo cp /root/dbgap/prj_12604.ngc /home/ubuntu/dbgap/
 vdb-config --import /home/ubuntu/dbgap/prj_12604.ngc /storage/gtex-data/
 
-cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
+    cd /storage/gtex-data/ # go to dbgap directory
     echo "checking $sample"
     # Check if already done
     x=$(aws s3 ls ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi | awk '{print $NF}')
@@ -94,8 +91,8 @@ do
     aws s3 cp /storage/vcfs/${sample}.vcf.gz.tbi ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi
     aws s3 cp /storage/vcfs/${sample}.log.txt ${OUTBUCKET}/${sample}_hipstr.log.txt
     # Remove files
-    rm -rf sra/${sample}*
-    rm -rf wgs/${sample}*
+    rm -rf /storage/gtex-data/sra/${sample}*
+    rm -rf /storage/gtex-data/wgs/${sample}*
     rm -rf /storage/vcfs/${sample}*
 done
 
