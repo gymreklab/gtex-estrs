@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SAMPLE=$1
 
 #    --stutter-in /mnt/resources/stutter_logs_0928.txt \
@@ -13,3 +15,5 @@ HipSTR \
     --def-stutter-model \
     --log /storage/vcfs/${SAMPLE}.log.txt
 tabix -p vcf /storage/vcfs/${SAMPLE}.vcf.gz
+
+exit 0

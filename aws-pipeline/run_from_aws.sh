@@ -73,6 +73,10 @@ sudo mkdir -p /storage/gtex-data/sra
 cd /storage/gtex-data/ # go to dbgap directory
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
+    echo "checking $sample"
+    # Check if already done
+    x=$(aws s3 ls ${OUTBUCKET}/${sample}_hipstr.vcf.gz.tbi | awk '{print $NF}')
+    test -z $x || continue
     echo "processing $sample"
     # Download files using aspera
     prefetch --max-size 200G ${sample}
