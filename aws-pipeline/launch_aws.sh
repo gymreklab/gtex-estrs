@@ -22,7 +22,7 @@ test -z ${AWS_SECRET_KEY} && usage
 test -z ${KEYNAME} && usage
 
 # Instance details
-SPOT_PRICE=0.07
+SPOT_PRICE=0.08
 EBSSIZE=300
 INSTANCE_TYPE=c4.xlarge
 IMAGE_ID=ami-d9cbbaa3

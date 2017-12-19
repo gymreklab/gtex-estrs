@@ -71,6 +71,10 @@ mkdir -p /home/ubuntu/dbgap/
 sudo cp /root/dbgap/prj_12604.ngc /home/ubuntu/dbgap/
 vdb-config --import /home/ubuntu/dbgap/prj_12604.ngc /storage/gtex-data/
 
+# Remove some files so we don't run out of space...
+sudo rm -f /home/ubuntu/aspera-connect-3.7.4.147727-linux-64.tar.gz
+sudo rm -f /home/ubuntu/aspera-connect-3.7.4.147727-linux-64.sh
+
 for sample in $(cat /storage/tmp/superbatch.txt)
 do
     cd /storage/gtex-data/ # go to dbgap directory
