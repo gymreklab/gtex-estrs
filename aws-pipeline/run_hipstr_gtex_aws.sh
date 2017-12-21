@@ -8,8 +8,8 @@ SAMPLE=$1
 
 HipSTR \
     --bams /storage/gtex-data/wgs/${SAMPLE}.bam \
-    --fasta /mnt/resources/Homo_sapiens_assembly19.fasta \
-    --regions /mnt/resources/GRCh37.hipstr_reference.bed \
+    --fasta /storage/resources/Homo_sapiens_assembly19.fasta \
+    --regions /storage/resources/GRCh37.hipstr_reference.bed \
     --min-reads 5 \
     --str-vcf /storage/vcfs/${SAMPLE}.vcf.gz \
     --def-stutter-model \

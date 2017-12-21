@@ -25,7 +25,7 @@ test -z ${KEYNAME} && usage
 SPOT_PRICE=0.08
 EBSSIZE=300
 INSTANCE_TYPE=c4.xlarge
-IMAGE_ID=ami-d9cbbaa3
+IMAGE_ID=ami-40b0cb3a #ami-d9cbbaa3
 
 STARTUP_SCRIPT=$(cat run_from_aws.sh | \
     sed "s~\$1~${SUPERBATCHPATH}~")

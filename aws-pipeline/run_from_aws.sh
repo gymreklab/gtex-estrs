@@ -63,6 +63,14 @@ sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
 cd ${HOMEDIR}/source/gtex-estrs
 git pull
 
+# Download reference genome and HipSTR reference
+sudo mkdir -p /storage/resources/
+cd /storage/resources/
+wget https://github.com/HipSTR-Tool/HipSTR-references/raw/master/human/GRCh37.hipstr_reference.bed.gz
+gunzip GRCh37.hipstr_reference.bed.gz
+aws s3 cp s3://ssc-psmc/Homo_sapiens_assembly19.fasta .
+samtools faidx Homo_sapiens_assembly19.fasta
+
 # Download all bam files to EBS storage
 sudo mkdir -p /storage/gtex-data
 sudo mkdir -p /storage/gtex-data/sra
