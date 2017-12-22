@@ -89,7 +89,7 @@ do
     echo "processing $sample"
     # Download files using aspera
     prefetch --max-size 200G ${sample}
-    sam-dump -u sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
+    sam-dump --primary sra/${sample}.sra | samtools view -bS > wgs/${sample}.bam
 #    sam-dump -u --aligned-region 11:2191318-2193345 ${sample} | samtools view -bS > wgs/${sample}.bam # TODO remove line
     samtools index wgs/${sample}.bam
     # Run HipSTR
