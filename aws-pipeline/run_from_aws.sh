@@ -54,7 +54,7 @@ sudo chmod 777 /storage/
 
 # Download files
 sudo mkdir -p /storage/tmp || die "Could not make tmp directory"
-aws s3 cp ${SUPERBATCHPATH} /storage/tmp/superbatch.txt
+aws s3 cp ${SUPERBATCHPATH} /storage/tmp/superbatch.txt || die "Could not get superbatch"
 
 # Make directory for inputs/outputs
 sudo mkdir -p /storage/vcfs || die "Could not make vcfs directory"
@@ -68,8 +68,8 @@ sudo mkdir -p /storage/resources/
 cd /storage/resources/
 wget https://github.com/HipSTR-Tool/HipSTR-references/raw/master/human/GRCh37.hipstr_reference.bed.gz
 gunzip GRCh37.hipstr_reference.bed.gz
-aws s3 cp s3://ssc-psmc/Homo_sapiens_assembly19.fasta .
-samtools faidx Homo_sapiens_assembly19.fasta
+aws s3 cp s3://ssc-psmc/Homo_sapiens_assembly19.fasta . || die "could not get ref genome"
+samtools faidx Homo_sapiens_assembly19.fasta || die "could not index fasta"
 
 # Download all bam files to EBS storage
 sudo mkdir -p /storage/gtex-data
