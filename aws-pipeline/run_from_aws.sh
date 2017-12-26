@@ -52,6 +52,9 @@ sudo mkdir -p /storage
 sudo mount /dev/xvdf /storage/
 sudo chmod 777 /storage/
 
+# Set configuration to try to avoid s3 timeout
+aws configure set default.s3.max_concurrent_requests 5
+
 # Download files
 sudo mkdir -p /storage/tmp || die "Could not make tmp directory"
 aws s3 cp ${SUPERBATCHPATH} /storage/tmp/superbatch.txt || die "Could not get superbatch"
