@@ -53,7 +53,7 @@ sudo mount /dev/xvdf /storage/
 sudo chmod 777 /storage/
 
 # Set configuration to try to avoid s3 timeout
-aws configure set default.s3.max_concurrent_requests 5
+aws configure set default.s3.max_concurrent_requests 1
 
 # Download files
 sudo mkdir -p /storage/tmp || die "Could not make tmp directory"
