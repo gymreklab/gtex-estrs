@@ -1,15 +1,18 @@
 #!/bin/bash
 
-GTEXDIR=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/GenotypeFiles/
-VCFFILE=${GTEXDIR}/phg000520.v2.GTEx_MidPoint_WGS_SNP_CNV.genotype-calls-vcf.c1/GTEx_Analysis_20150112_WholeGenomeSeq_148Indiv_GATK_HaplotypeCaller.vcf.gz
-SAMPLEFILE=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/PhenotypeFiles/phs000424.v6.pht002742.v6.p1.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
+#GTEXDIR=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/
+GTEXDIR=/storage/resources/datasets/gtex/59533/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v7.p2.c1.GRU/
+#VCFFILE=${GTEXDIR}/GenotypeFiles/phg000520.v2.GTEx_MidPoint_WGS_SNP_CNV.genotype-calls-vcf.c1/GTEx_Analysis_20150112_WholeGenomeSeq_148Indiv_GATK_HaplotypeCaller.vcf.gz
+VCFFILE=${GTEXDIR}/GenotypeFiles/phg000830.v1.GTEx_WGS.genotype-calls-vcf.c1/GTEx_Analysis_2016-01-15_v7_WholeGenomeSeq_652Ind_GATK_HaplotypeCaller.vcf.gz
+SAMPLEFILE=${GTEXDIR}/PhenotypeFiles/phs000424.v7.pht002742.v7.p2.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
+#SAMPLEFILE=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/PhenotypeFiles/phs000424.v6.pht002742.v6.p1.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
 HMAPFILE=/storage/resources/datasets/hapmap3/hapmap3_b37
 MINMAF=0.05
 
 OUTDIR=/storage/mgymrek/gtex/genotypePCA/
-PREFIX=${OUTDIR}/GTEx_wgs
+PREFIX=${OUTDIR}/GTEx_wgs_650h
 PREFIX2=${OUTDIR}/Hapmap3
-ALLPREFIX=${OUTDIR}/GTEx_hapmap_merged
+ALLPREFIX=${OUTDIR}/GTEx_hapmap_merged_650h
 
 # Convert VCF to ped format
 vcftools --gzvcf ${VCFFILE} --plink --out ${PREFIX} --remove-indels --remove-filtered-all --maf ${MINMAF}
@@ -36,7 +39,7 @@ plink --bfile ${ALLPREFIX} --exclude ${ALLPREFIX}.prune.out --maf ${MINMAF} --ou
     --geno 0.05
 
 # Convert to eigstrat format
-parfile=convertf_parfile.txt
+parfile=convertf_parfile_v2h.txt
 echo "genotypename: " ${ALLPREFIX}.pruned.ped > ${parfile}
 echo "snpname: " ${ALLPREFIX}.pruned.map >> ${parfile}
 echo "indivname: " ${ALLPREFIX}.pruned.ped >> ${parfile}

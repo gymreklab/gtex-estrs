@@ -1,19 +1,25 @@
 #!/bin/bash
 
-GTEXDIR=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/GenotypeFiles/
+set -e
+
+#GTEXDIR=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/GenotypeFiles/
+GTEXDIR=/storage/resources/datasets/gtex/59533/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v7.p2.c1.GRU/
 KGVCF=/storage/resources/datasets/1000Genomes/ALL.chip.omni_broad_sanger_combined.20140818.snps.genotypes.vcf.gz
-VCFFILE=${GTEXDIR}/phg000520.v2.GTEx_MidPoint_WGS_SNP_CNV.genotype-calls-vcf.c1/GTEx_Analysis_20150112_WholeGenomeSeq_148Indiv_GATK_HaplotypeCaller.vcf.gz
-SAMPLEFILE=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/PhenotypeFiles/phs000424.v6.pht002742.v6.p1.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
+#VCFFILE=${GTEXDIR}/GenotypeFiles/phg000520.v2.GTEx_MidPoint_WGS_SNP_CNV.genotype-calls-vcf.c1/GTEx_Analysis_20150112_WholeGenomeSeq_148Indiv_GATK_HaplotypeCaller.vcf.gz
+VCFFILE=${GTEXDIR}/GenotypeFiles/phg000830.v1.GTEx_WGS.genotype-calls-vcf.c1/GTEx_Analysis_2016-01-15_v7_WholeGenomeSeq_652Ind_GATK_HaplotypeCaller.vcf.gz
+SAMPLEFILE=${GTEXDIR}/PhenotypeFiles/phs000424.v7.pht002742.v7.p2.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
+#SAMPLEFILE=/storage/resources/datasets/gtex/53844/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v6.p1.c1.GRU/PhenotypeFiles/phs000424.v6.pht002742.v6.p1.c1.GTEx_Subject_Phenotypes.GRU.txt.gz
 MINMAF=0.05
+TEMPDIR=/storage/mgymrek/gtex/genotypePCA/tmp
 
 OUTDIR=/storage/mgymrek/gtex/genotypePCA/
-ALLPREFIX=${OUTDIR}/GTEx_1KG_merged
-PREFIX=${OUTDIR}/GTEx_wgs
+ALLPREFIX=${OUTDIR}/GTEx_1KG_merged_650
+PREFIX=${OUTDIR}/GTEx_wgs_650
 PREFIX2=${OUTDIR}/1000G_omni
 
 # Convert VCF to ped format
-vcftools --gzvcf ${VCFFILE} --plink --out ${PREFIX} --remove-indels --remove-filtered-all --maf ${MINMAF}
-vcftools --gzvcf ${KGVCF} --plink --out ${PREFIX2} --remove-indels --remove-filtered-all --maf ${MINMAF}
+vcftools --temp ${TEMPDIR} --gzvcf ${VCFFILE} --plink --out ${PREFIX} --remove-indels --remove-filtered-all --maf ${MINMAF}
+vcftools --temp ${TEMPDIR} --gzvcf ${KGVCF} --plink --out ${PREFIX2} --remove-indels --remove-filtered-all --maf ${MINMAF}
 
 # Make map files same format
 cat ${PREFIX}.map | awk '{print $1 "\t" $1"_"$4 "\t" $3 "\t" $4}' > ${PREFIX}.map.tmp
@@ -22,10 +28,18 @@ cat ${PREFIX2}.map | awk '{print $1 "\t" $1"_"$4 "\t" $3 "\t" $4}' > ${PREFIX2}.
 mv ${PREFIX2}.map.tmp ${PREFIX2}.map
 
 # Get only biallelic
+# First go through the steps to find SNPs that need to be excluded
+plink --file ${PREFIX} --biallelic-only --out ${PREFIX}.biallelic --make-bed
+plink --file ${PREFIX2} --biallelic-only --out ${PREFIX2}.biallelic --make-bed
+
+# This will fail and output missnp file
+plink --bfile ${PREFIX}.biallelic --bmerge ${PREFIX2}.biallelic --make-bed --out ${ALLPREFIX}
+
+# Now go back and exclude missnp ones
 plink --file ${PREFIX} --biallelic-only --exclude ${ALLPREFIX}-merge.missnp --out ${PREFIX}.biallelic --make-bed
 plink --file ${PREFIX2} --biallelic-only --exclude ${ALLPREFIX}-merge.missnp --out ${PREFIX2}.biallelic --make-bed
 
-# Merge ped files
+# And now merge again
 plink --bfile ${PREFIX}.biallelic --bmerge ${PREFIX2}.biallelic --make-bed --out ${ALLPREFIX}
 
 # LD prune
@@ -35,7 +49,7 @@ plink --bfile ${ALLPREFIX} --exclude ${ALLPREFIX}.prune.out --maf ${MINMAF} --ou
     --geno 0.05
 
 # Convert to eigstrat format
-parfile=convertf_parfile.txt
+parfile=convertf_parfile_v2.txt
 echo "genotypename: " ${ALLPREFIX}.pruned.ped > ${parfile}
 echo "snpname: " ${ALLPREFIX}.pruned.map >> ${parfile}
 echo "indivname: " ${ALLPREFIX}.pruned.ped >> ${parfile}
