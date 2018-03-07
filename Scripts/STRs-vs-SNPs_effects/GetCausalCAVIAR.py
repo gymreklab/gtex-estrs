@@ -33,13 +33,18 @@ def WriteCorrTable(indexed_genotypes):
     G=indexed_genotypes.transpose()
     variants = list(G.columns)
     CMat=[]
-    len(set(variants))
+    print '\t\t\t**', len(variants)
     for V1 in variants:
         COV=[]
         for V2 in variants:
             X=G[V1].replace('None', np.nan).astype(float)
             Y=G[V2].replace('None', np.nan).astype(float)
-            COV.append(X.corr(Y))
+            #COV.append(X.corr(Y))
+	    if X.corr(Y) is np.nan:    #### 
+		print X, list(X),'\n**',Y, list(Y)
+		COV.append(0.0) #For missing LD we assume non linear corr (undetermined LD)
+	    else:
+		COV.append(X.corr(Y))
         CMat.append(COV)
     return pd.DataFrame(CMat,columns=variants, index=variants) 
 
@@ -83,7 +88,8 @@ if __name__ == "__main__":
     PROGRESS("Load annotation", printit=DEBUG)
     expr_annot = pd.read_csv(EXPRANNOTFILE)
     expr_annot.index = expr_annot["probe.id"].values
-    expr_annot = expr_annot.loc[list(expr.columns)].dropna() 
+    expr_annot = expr_annot.reindex(list(expr.columns))
+    expr_annot = expr_annot.dropna() 
     expr_annot = expr_annot[expr_annot["gene.chr"] == CHROM]
 
     # Load strs Regression
@@ -98,7 +104,7 @@ if __name__ == "__main__":
 
     #Load SNP genotypes
     PROGRESS("Load SNPs", printit=DEBUG)
-    snpgt = pd.read_csv(SNPGTFILE, sep="\t")
+    snpgt = pd.read_csv(SNPGTFILE, sep="\t",low_memory=False)
     snpgt = snpgt.loc[snpgt['chrom']==CHROM]
 
     # Load STR genotypes
@@ -126,12 +132,11 @@ if __name__ == "__main__":
     #open output files
     Errorfile = open(TMPDIR+"/Errorfile.out", 'w')
     OUT = open(OUTFILE, "w")
-    OUT.write("\t".join(["chrom", "gene", "best.str.start", "best.str.score", "top.variant", "top.variant.score"])+'\n')
-    
+    OUT.write("\t".join(["chrom", "gene", "best.str.start", "best.str.score", "top.variant", "top.variant.score","top.snp.score"])+'\n')
 # For each gene, get all cis-variants and the best STR
     for i in range(expr_annot.shape[0]):
         gene=expr_annot.index.values[i]
-        ensgene = expr_annot["gene.id"].values[i]
+        ensgene = expr_annot["gene.id"].values[i]  #'ENSG00000215912.7'
         genedir=TMPDIR+"/%s"%gene
         if not os.path.exists(genedir):
             os.mkdir(genedir)
@@ -141,14 +146,22 @@ if __name__ == "__main__":
     # Pull out cis SNPs
         PROGRESS("Getting cis SNPs for %s"%gene)
         cis_snps = snps[(snps["str.start"] >= (start-DISTFROMGENE)) & (snps["str.start"] <= (end+DISTFROMGENE))]
+        print cis_snps.shape , '###'
+        cis_snps = cis_snps.loc[cis_snps["str.start"].isin(list(snpgt["start"]))]  ###
+        print cis_snps.shape , '###'
         cis_variants = cis_snps.loc[cis_snps['gene']==ensgene]
         cis_variants=cis_variants.sort_values(by="p.wald").head(n=100)
         cis_variants.index = cis_variants["str.start"].apply(lambda x: "SNP_%s"%int(x))
         L=list(cis_variants.index)
-        
+        print 'length of cis variants...',len(L) ###############################
     # Pull out most significant STR
         PROGRESS("Getting most significant cis STR for %s"%gene)
-        best_str_start = int(strs[strs["gene"]==ensgene].sort_values("p.wald")["str.start"].values[0])
+        T = strs[strs["gene"]==ensgene].sort_values("p.wald")
+        if T.shape[0]==0:
+            PROGRESS("There are no STRs found for %s... Gene not in LR table"%gene)
+            continue
+        else: 
+            best_str_start = int(T["str.start"].values[0])
         cis_strs = strs.loc[strs['gene']==ensgene]
         cis_strs.index = list(cis_strs['str.id'])
         try:
@@ -156,6 +169,7 @@ if __name__ == "__main__":
         except:
             pass
         cis_variants.loc['STR_'+str(best_str_start)] = list(cis_strs.loc['STR_'+str(best_str_start)])
+        print 'best STR ...', '\t', cis_variants.shape
     # Make z file data
         Ztable = MakeZScoreTable(cis_variants[['beta','beta.se']])
         if Ztable is None:
@@ -168,12 +182,14 @@ if __name__ == "__main__":
         genotypes.loc['STR_'+str(best_str_start)] = list(strgt.loc['STR_'+str(best_str_start)])
         del genotypes['chrom']
         del genotypes['start']
+        print genotypes.shape
         CorrMatrix = WriteCorrTable(genotypes)
         CorrMatrix.to_csv(genedir+'/LDFILE', sep='\t',header=None, index=None)
         PROGRESS("Matrix of corr was sent to file for %s"%gene)
     #Run caviar
         caviar_cmd = "CAVIAR -l %s -z %s -o %s/caviar -c 1 -f 1 > %s"%(genedir+"/LDFILE", genedir+"/ZFILE", genedir, genedir+"/log")
         os.system(caviar_cmd)
+
     # Output results
         if not os.path.exists(genedir+'/caviar_post'):
             Errorfile.write(gene+": CAVIAR did not run.\n\tERROR: Segmentation fault (core dumped) in log file\n")
@@ -184,7 +200,11 @@ if __name__ == "__main__":
             caviarstr  =  post.loc[post[0]=='STR_'+str(best_str_start)][2].tolist()[0]
             topvariant =  post.sort_values(post.columns[2], ascending=False).values[0][0]
             topscore  =  post.sort_values(post.columns[2], ascending=False).values[0][2]
-            OUT.write("\t".join([CHROM, gene, str(best_str_start), str(caviarstr), topvariant, str(topscore)])+'\n')
+            if 'STR' in topvariant:
+                snpscore  =  post.sort_values(post.columns[2], ascending=False).values[1][2]
+            else:
+                snpscore=topscore
+            OUT.write("\t".join([CHROM, gene, str(best_str_start), str(caviarstr), topvariant, str(topscore), str(snpscore)])+'\n')
         O=0
     OUT.close()
     Errorfile.close()

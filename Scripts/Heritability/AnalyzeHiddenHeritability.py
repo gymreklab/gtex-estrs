@@ -28,7 +28,7 @@ def PROGRESS(msg, printit=True):
 DISTFROMGENE = 100000
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Linreg/LMM simulations with real data")
+    parser = argparse.ArgumentParser(description="Analizing Hidden Heritability")
     parser.add_argument("--estrs", help="Estr results", type=str, required=True)
     parser.add_argument("--esnps", help="Esnp results", type=str, required=True)
     parser.add_argument("--str-fdr-method", help="FDR method (STRs)", type=str, required=False, default="qval.gene")
