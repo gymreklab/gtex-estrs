@@ -39,6 +39,12 @@ def PruneRareGT(gtsum, MINCOUNT):
             gtsum = map(lambda x: SetNone(x, gt), gtsum)
     return gtsum
 
+def checkgt(record,s):
+    try:
+        return(record.genotype(s)[GTFIELD])
+    except:
+        return None
+    
 def NormalizeGT(genotypes, NORM=True, PRINT_ALLELES=False, MINCOUNT=1, COUNTFILTERS=False):
     def getsum(x):
         if x is None: return None
@@ -119,11 +125,10 @@ if __name__ == "__main__":
         
         
     for record in vcf_reader:
-        #print record.QUAL, ' ', record.FILTER, ' ', record.FORMAT
-        if (FILTER==True) and (record.FILTER != []):         # Filter variants that passed filters in vcf  
-            pass
+        if (FILTER==True) and (record.FILTER != []):         # Filter variants that passed filters in vcf 
+            continue
         else:
-            print record.QUAL, '   ', record.FILTER, '   ', record.FORMAT
+            print record.ID, '   ', record.FILTER, '   ', record.QUAL
             if record.call_rate == 0:       # otherwise pyvcf functions break
                 counters["minsamples"] = counters["minsamples"] + 1
                 continue
@@ -134,9 +139,9 @@ if __name__ == "__main__":
                 continue
             chrom = record.CHROM
             if "chr" not in chrom: chrom = "chr%s"%chrom
-            pos = record.POS
-        #	print pos
-            genotypes = [GetGT(record.genotype(s)[GTFIELD]) for s in SAMPLES]
+            pos = record.POS            
+            genotypes = [GetGT(checkgt(record,s)) for s in SAMPLES]
+            print record.ID, ' ', len(genotypes), ' ', record.FORMAT  ###
             if len([item for item in genotypes if item is not None]) < MINSAMPLES:
                 counters["minsamples"] = counters["minsamples"] + 1
                 continue

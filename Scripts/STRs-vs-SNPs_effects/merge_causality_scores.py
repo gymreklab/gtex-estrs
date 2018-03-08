@@ -38,7 +38,7 @@ for t in tissues:
     elif scoretype == "posterior":
         data["score"] = data["best.str.score"]
     else: data["score"] = -1
-    tissue_data[t] = data[["gene","chrom","best.str.start","score","qvalue"]]
+    tissue_data[t] = data[["gene","chrom","best.str.start","top.variant","score","qvalue"]]
     genes = genes.union(set(data["gene"]))
 
 genes = list(genes)
@@ -47,37 +47,46 @@ d_pos = []
 d_score = []
 d_tissue = []
 d_qval = []
-
+d_tis=[]
+d_top=[]
 for gene in genes:
+    n=0
     best_score = -1
     best_tissue = "NA"
     best_str = "NA"
     best_q = "NA"
     chrom = "NA"
+    top_var = "NA"
     for t in tissues:
         x = tissue_data[t]
         x = x[x["gene"]==gene]
         if x.shape[0] == 1:
+            n=n+1
             score = x["score"].values[0]
             chrom = x["chrom"].values[0]
             start = x["best.str.start"].values[0]
             q = x["qvalue"].values[0]
+            v = x["top.variant"].values[0]
             if score > best_score:
                 best_score = score
                 best_tissue = t
                 best_str = start
                 best_q = q
                 chrom = chrom
+                top_var = v
     d_chrom.append(chrom)
     d_pos.append(best_str)
     d_score.append(best_score)
     d_tissue.append(best_tissue)
     d_qval.append(best_q)
-
+    d_tis.append(n)
+    d_top.append(top_var)
 df = pd.DataFrame({"gene": genes,
                    "chrom": d_chrom,
                    "best.str.start": d_pos,
                    "best.score": d_score,
+                   "top.variant": d_top,
                    "best.tissue": d_tissue,
-                   "best.q": d_qval})
-df[["gene","chrom","best.str.start","best.score","best.tissue","best.q"]].to_csv(sys.stdout, sep="\t", index=False)
+                   "best.q": d_qval,
+                   "NumTissues":d_tis})
+df[["gene","chrom","best.str.start","best.score","best.q","top.variant","best.tissue","NumTissues"]].to_csv(sys.stdout, sep="\t", index=False)

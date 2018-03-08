@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="get datasets for LMM assocation tests with STRs and SNPs")
     parser.add_argument("--expr", help="Normalized expression residuals", type=str, required=True)
     parser.add_argument("--exprannot", help="Expression annotation file", type=str, required=True)
-    parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=True)
+    parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=False)
     parser.add_argument("--distfromgene", help="Look at STRs/SNPs within this distance of gene boundaries", type=int, required=True)
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--out", help="Write data files to this file", type=str, required=True)
@@ -116,7 +116,8 @@ if __name__ == "__main__":
 
     # Load STR genotypes
     PROGRESS("Load STRs")
-    strgt = pd.read_csv(STRGTFILE, sep="\t")
+    strgt = pd.read_csv(STRGTFILE, sep="\t", low_memory=False)
+    strgt = strgt[strgt["chrom"] == CHROM]
 
     # Restrict to STR samples
     str_samples = list(set(strgt.columns[2:].values))
@@ -125,19 +126,21 @@ if __name__ == "__main__":
         if item not in expr.index: samples_to_remove.append(item) #str_samples.remove(item)
     for item in samples_to_remove: str_samples.remove(item)
     expr = expr.loc[str_samples,:]
-#    print len(str_samples), '   ', expr.shape
-
+    PROGRESS("There are %s samples"%str(strgt.shape))
+    
     f = open(OUTFILE, "w")
-    f.write("\t".join(["gene","chrom","str.id","str.start","n.miss","allele1.dummy","allele2.dummy","af.dummy","beta","beta.se","lambda.remel","p.wald"])+"\n")
+    f.write("\t".join(["gene", "chrom", "str.id", "str.start", "n.miss", "allele1.dummy",  "allele2.dummy", "af.dummy", "beta", "beta.se", "lambda.remel","p.wald"])+"\n")
     # For each gene:
     # Pull out STRs within distance of gene ends
-    # For each STRxgene pair, get expr, str for samples with data and do linreg
+    # For each STR - gene pair, get expr, str for samples with data and do linreg
+    PROGRESS("Expression annotation size %s "%str(expr_annot.shape))
     for i in range(expr_annot.shape[0]):
         gene = expr_annot.index.values[i]
-        PROGRESS("Getting data for %s"%gene)
+        PROGRESS(" Getting data for %s"%gene)
         start = expr_annot["gene.start"].values[i]
         end = expr_annot["gene.stop"].values[i]
         cis_strs = strgt[(strgt["start"] >= (start-DISTFROMGENE)) & (strgt["start"] <= (end+DISTFROMGENE))]
+        PROGRESS("%s STRs tested \n"%str(cis_strs.shape[0]))
        
         if PERMUTE_EXPR:
             expr[gene] = random.sample(list(expr[gene].values), expr.shape[0])
@@ -154,7 +157,7 @@ if __name__ == "__main__":
            
             # Filter
             
-            print 'Initial sample size: ',len(locus_str.iloc[:,0])
+            PROGRESS("Initial sample size:  %s"%str(len(locus_str.iloc[:,0])))
             #None as genotype
             samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if str(locus_str.iloc[:,0].values[k]) != "None" ]
             locus_str = locus_str.loc[samples_to_keep,:]
@@ -171,8 +174,7 @@ if __name__ == "__main__":
             if len(set(locus_str.iloc[:,0].values)) < MINGENOTYPE: 
                 print locus_str.columns[0], ' skipped ................'
                 continue
-            
-            print 'After clean up...',locus_str.shape, locus_y.shape
+            PROGRESS('After clean up... %s'%str(locus_y.shape))
           
             # Run regression
             beta, beta_se, p = LinearRegression(map(float,locus_str.iloc[:,0].values), locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)

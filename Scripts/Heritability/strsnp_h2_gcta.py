@@ -165,13 +165,15 @@ def WriteGCTACovarFile(locus, strcovarfile):
 DISTFROMGENE = 100000    
     
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Linreg/LMM simulations with real data")
+    parser = argparse.ArgumentParser(description="heritability of gene expression due to SNPs vs STRs")
     parser.add_argument("--expr", help="Normalized expression residuals", type=str, required=True)
+    parser.add_argument("--samples", help="Restric to samples in this file", type=str, required=False)
     parser.add_argument("--exprannot", help="Expression annotation file", type=str, required=True)
     parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=True)
     parser.add_argument("--distfromgene", help="Look at STRs/SNPs within this distance of gene boundaries", type=int, required=True)
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
+    parser.add_argument("--esnps", help="File with regression of SNPs with LR pvalues", type=str, required=False)
     parser.add_argument("--out", help="Write results to this file", type=str, required=True)
     parser.add_argument("--tmpdir", help="Use this directory instead of /tmp for temporary files", type=str, default="/tmp")
     parser.add_argument("--snp-maf", help="Only use SNPs with this MAF in our samples", type=float, default=0.01)
@@ -200,12 +202,15 @@ if __name__ == "__main__":
     ESTR_RESULTS_FILE = args.estr_results
     REML_NO_CONSTRAIN = args.reml_no_constrain
     ESTR_GENES_ONLY = args.estr_genes_only
+    SAMPLES = args.samples
     PERMUTE_STRS = args.permute_strs
     UNLINKED_CTRL = args.ctrl
     DEBUG = args.debug
     if INCLUDE_STR == "RE" and LMM_METHOD == "GEMMA":
         PROGRESS("ERROR: Cannot run GEMMA with STR as random effect")
         sys.exit(1)
+    if args.esnps:
+        ESNPS = pd.read_csv(args.esnps, sep='\t')
     if LMM_METHOD not in ["GCTA", "GEMMA"]:
         PROGRESS("ERROR: Command must be one of GCTA, GEMMA")
         sys.exit(1)
@@ -230,7 +235,11 @@ if __name__ == "__main__":
     if PERMUTE_STRS > 0 and INCLUDE_STR != "RE":
         PROGRESS("ERROR: Permutation analysis only for STR as random effect")
         sys.exit(1)
-
+    if SAMPLES is not None:
+        samples = pd.read_csv(SAMPLES, sep=' ')
+        sample = [x.strip() for x in list(samples['x'])]
+        samples = ['-'.join(s.split('.')).strip('\n') for s in sample]   #Using Ids.txt file created from expression cleaning
+        
     # Load expression and annotation
     PROGRESS("\n\nLoad expression", printit=DEBUG)
     expr = pd.read_csv(EXPRFILE)
@@ -244,19 +253,24 @@ if __name__ == "__main__":
     PROGRESS("Load SNPs", printit=DEBUG)
     snpgt = pd.read_csv(SNPGTFILE, sep="\t")
     snpgt = snpgt.loc[snpgt['chrom']==CHROM]
-
+    esnps = ESNPS.loc[ESNPS['chrom']==CHROM]
 # Load STR genotypes
     PROGRESS("Load STRs", printit=DEBUG)
-    strgt = pd.read_csv(STRGTFILE, sep="\t")
-    strgt = strgt.loc[strgt['chrom']==CHROM]
-
-# Restrict to STR samples
-    str_samples = list(set(strgt.columns[2:].values).intersection(set(snpgt.columns[2:].values)))
+    strgt = pd.read_csv(STRGTFILE, sep="\t",low_memory=False)
+    strgt = strgt.loc[strgt['chrom']==CHROM].reindex()
+    print "**",strgt.shape
+# Restrict to samples
+    if SAMPLES is None:
+        str_samples = list(set(strgt.columns[2:].values).intersection(set(snpgt.columns[2:].values)))    
+    str_samples = [ s for s in samples if s in expr.index and s in list(strgt.columns)] #keep only genotypes+expression data
+    #str_samples = [ s for s in str_samples if s in in list(strgt.columns)]
+####
+    print len(str_samples)
     expr = expr.loc[str_samples,:]
-    ##################################2
     snpgt = snpgt[["chrom","start"] + str_samples]
+    #print(strgt['GTEX-ZZPU'])
     strgt = strgt[["chrom","start"] + str_samples]
-
+    print "**Samples*********************** ",len(str_samples), strgt.shape
 # Load STR results
     if ESTR_RESULTS_FILE is not None:
         estr_results = pd.read_csv(ESTR_RESULTS_FILE, sep="\t")
@@ -264,7 +278,7 @@ if __name__ == "__main__":
 # Set up output file
     outf = open(OUTFILE, "w")
     if INCLUDE_STR == "NO" or INCLUDE_STR == "SAMPLES":
-        outf.write("\t".join(["chrom","gene","num_snps","cis_snp_h2","cis_snp_h2_se","logL","nsamp"])+"\n")
+        outf.write("\t".join(["chrom","gene","num_snps","cis_snp_h2","cis_snp_h2_se","logL","nsamp", "pval"])+"\n")
     else:
         outf.write("\t".join(["chrom","gene","str_start","num_snps","cis_snp_h2","cis_snp_h2_se",\
                                   "cis_str_h2","cis_str_h2_se","logL","nsamp","cis_str_h2_pval"])+"\n") #nperm for cis strs
@@ -281,15 +295,15 @@ if __name__ == "__main__":
 # For each gene, pull out data and perform specified method
     for i in range(expr_annot.shape[0]):
         PROGRESS("\t\t Starting the loop the %s th gene"% str(i))
-        gene = expr_annot.index.values[i]
-        ensgene = expr_annot["gene.id"].values[i]
+        gene = 'ENSG00000084072.12'#expr_annot.index.values[i] 
+        ensgene = 'ENSG00000084072.12' #expr_annot["gene.id"].values[i]
         PROGRESS("Getting data for %s"%gene, printit=DEBUG)
         genedir = os.path.join(TMPDIR,"%s/"%gene)
         if not os.path.exists(genedir):
             os.mkdir(genedir)
         start = expr_annot["gene.start"].values[i]
         end = expr_annot["gene.stop"].values[i]
-        y = expr.loc[:,gene]                             ##
+        y = expr.loc[:,gene]       ; print gene                      ##*** on print
         
 # Pull out STRs
         samples_to_keep = list(y.dropna(axis=0, how='any').index) ## str_samples
@@ -297,11 +311,12 @@ if __name__ == "__main__":
         if INCLUDE_STR != "NO":
             try:
                 if UNLINKED_CTRL:
+                    print gene, ' .Unlinked' #don't want this now ***
                     possible_starts = list(strgt[(strgt["start"] >= (start-DISTFROMGENE)) & (strgt["start"] <= (end+DISTFROMGENE))].start)
                     best_str_start = random.sample(possible_starts, 1)[0]
                 else: 
 #make sure to match on Ensembl gene (gene is ILMN if using array)
-                    best_str_start = estr_results[estr_results["gene"]==ensgene].sort("p.wald")["str.start"].values[0]
+                    best_str_start = estr_results[estr_results["gene"]==ensgene].sort_values("p.wald")["str.start"].values[0]
             except:
                 print sys.exc_info()
                 PROGRESS("[%s]\tERROR: couldn't find STR LMM results"%gene)
@@ -316,6 +331,7 @@ if __name__ == "__main__":
             locus_str.columns = ["STR_%s"%best_str_start]
             samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if str(locus_str.iloc[:,0].values[k]) != "None"]
             locus_str = locus_str.loc[samples_to_keep,:]
+            print locus_str.columns  #****
             # Make sure STRs are normalized
             try:
                 locus_str = ZNorm(locus_str)
@@ -324,12 +340,16 @@ if __name__ == "__main__":
                 continue
         # Pull out SNPs
         PROGRESS("Getting SNPs data")
+        
+#        s = list(esnps.loc[esnps['gene']==gene]['str.start'])[0] ######################
+#        cis_snps = snpgt.loc[snpgt["start"] == s] #####################
         cis_snps = snpgt[(snpgt["start"] >= (start-DISTFROMGENE)) & (snpgt["start"] <= (end+DISTFROMGENE))]
+        
         locus_snp = cis_snps[samples_to_keep].transpose()
         locus_snp.index = samples_to_keep
         locus_snp.columns = cis_snps["start"].apply(lambda x: "SNP_%s"%x)
         locus_snp_maf = locus_snp.apply(lambda x: GetMAF(x), 0)
-
+        print locus_snp.columns, ' cis SNPs', locus_snp.shape
         if locus_snp.shape[1] == 0:
             PROGRESS("[%s]\tERROR: no common SNPs in region\t %s"%(gene, locus_snp.shape))
             continue
@@ -382,11 +402,12 @@ if __name__ == "__main__":
 
         # Output results
         if INCLUDE_STR == "NO" or INCLUDE_STR == "SAMPLES":
-            outf.write("\t".join(map(str, [CHROM, gene, locus_snp.shape[1], cis_snp_h2, cis_snp_h2_se, logL, len(samples_to_keep)]))+"\n")
+            outf.write("\t".join(map(str, [CHROM, gene, locus_snp.shape[1], cis_snp_h2, cis_snp_h2_se, logL, len(samples_to_keep)]),pval)+"\n")
         else:
             outf.write("\t".join(map(str, [CHROM, gene, best_str_start, locus_snp.shape[1], cis_snp_h2, cis_snp_h2_se,\
                                                cis_str_h2, cis_str_h2_se, logL, len(samples_to_keep), pval]))+"\n")
             ##used if we consider all cis_strs to genes as FE --> len(cis_str_h2_null)
+       
         outf.flush()
     outf.close()
                                                                                   
