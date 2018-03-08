@@ -2,8 +2,9 @@
 
 source params.sh
 
-# Index TFBS regions with Giggle
+# Index TFBS +RNABP regions with Giggle
 #./index_tfs.sh
+#./index_rnabps.sh
 
 for t in $TISSUES
 do
