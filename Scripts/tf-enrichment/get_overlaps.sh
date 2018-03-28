@@ -11,7 +11,7 @@ cat /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/${TISSUE}/Master.table
     awk '($8<0.1)'| awk '$10 ~ /STR_/ ' | awk '{print $2 "\t" $4 "\t" $4+1}' > ${TMPDIR}/${TISSUE}_${PREFIX}_Causal_eSTRs.bed
 cat /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/${TISSUE}/Lin_Reg_Out | \
     grep -v gene | awk '{print $3 "\t" $5 "\t" $5+1}' > ${TMPDIR}/${TISSUE}_${PREFIX}_allSTRs.bed
-bgzip -f ${TMPDIR}/${TISSUE}_${PREFIX}Causal_eSTRs.bed
+bgzip -f ${TMPDIR}/${TISSUE}_${PREFIX}_Causal_eSTRs.bed
 bgzip -f ${TMPDIR}/${TISSUE}_${PREFIX}_allSTRs.bed
 
 # Giggle search each list

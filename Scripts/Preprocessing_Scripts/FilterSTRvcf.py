@@ -187,11 +187,14 @@ def main():
 # low call rate STRs and homopolymers
 # low heterozygosity locus            
 # locus not in HWE
-    if ClR:     
-        Table["FILTER"] = np.where(Table["CallCounts"] >= N, "", "CALLRATE")
-        
+
+
     if HOM:
         Table["FILTER"] = np.where(Table["UNIT"] !=1, Table["FILTER"], Table["FILTER"]+" HOM_POLY")
+    ### Create HOM only file with ==1 instead of !=1
+
+    if ClR:     
+        Table["FILTER"] = np.where(Table["CallCounts"] >= N, "", "CALLRATE")
     
     if HWE:
         Table["FILTER"] = np.where(Table["hwepval"] >=HWE, Table["FILTER"], Table["FILTER"]+" HWE")
