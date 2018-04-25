@@ -125,7 +125,7 @@ if __name__ == "__main__":
         
         
     for record in vcf_reader:
-        if (FILTER==True) and (record.FILTER != []):         # Filter variants that passed filters in vcf 
+        if (FILTER==True) and (record.FILTER != [] ): 
             continue
         else:
             print record.ID, '   ', record.FILTER, '   ', record.QUAL

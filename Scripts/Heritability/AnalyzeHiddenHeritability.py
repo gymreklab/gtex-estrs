@@ -124,7 +124,7 @@ if __name__ == "__main__":
         esnp_fdr = min(esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD])
         probes = expr_annot[expr_annot["gene.id"]==ensgene]["probe.id"].values
         if len(probes) != 1:
-            PROGRESS("ERROR: no unique probe for for %s"%ensgene)
+            PROGRESS("ERROR: no unique probe for %s"%ensgene)
             continue
         else: probe = probes[0]
         PROGRESS("Getting data for %s (%s)"%(ensgene, probe), printit=DEBUG)
