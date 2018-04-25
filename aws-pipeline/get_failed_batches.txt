@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Get batches that are running
+./check-aws.sh
+
+# Get list of batch ids that are running
+cat gtex_aws_progress.txt | grep -v sda | awk -F" " '($3<=5)' | cut -f 2 -d' '  > batches_in_progress.txt
