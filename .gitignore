@@ -1,0 +1,9 @@
+*.ipynb_checkpoints*
+*~
+*#
+*.tab
+*del
+*.pdf
+*pdfs*
+aws-pipeline/batches*
+backup/
