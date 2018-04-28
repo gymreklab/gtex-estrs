@@ -34,7 +34,7 @@ def WriteCorrTable(indexed_genotypes):
         for V2 in variants:
             X=G[V1].replace('None', np.nan).astype(float)
             Y=G[V2].replace('None', np.nan).astype(float)
-            if X.corr(Y) is np.nan:    #### 
+            if X.corr(Y) is np.nan :   #
                 COV.append(0.0) #For missing LD we assume non linear corr (undetermined LD)
             else:
                 COV.append(X.corr(Y))
@@ -117,7 +117,12 @@ if __name__ == "__main__":
     snpgt = snpgt[["chrom","start"] + str_samples]
     snpgt.index = list(snpgt["start"].apply(lambda x: "SNP_%s"%int(x)))
     strgt = strgt[["chrom","start"] + str_samples]
-    strgt.index = list(strgt["start"].apply(lambda x: "STR_%s"%int(x)))
+    try:
+        strgt.index = list(strgt["start"].apply(lambda x: "STR_%s"%int(x)))
+    except:
+        print strgt
+        sys.exit(1)
+    print strgt.head(3)
     # Load eSTR results
     PROGRESS("Restrict to eSTR genes only", printit=DEBUG)
     if ESTRGENESFILE is not None:
@@ -133,7 +138,7 @@ if __name__ == "__main__":
     O=0
     for i in range(expr_annot.shape[0]):
         gene=expr_annot.index.values[i]
-        ensgene = expr_annot["gene.id"].values[i]  #'ENSG00000215912.7'
+        ensgene = expr_annot["gene.id"].values[i] 
         genedir=TMPDIR+"/%s"%gene
         if not os.path.exists(genedir):
             os.mkdir(genedir)
@@ -146,17 +151,13 @@ if __name__ == "__main__":
         PROGRESS("Getting cis SNPs for %s"%gene)
         cis_snps = snps[(snps["str.start"] >= (start-DISTFROMGENE)) & (snps["str.start"] <= (end+DISTFROMGENE))]
         cis_snps = cis_snps.loc[cis_snps['gene']==ensgene]
-        cis_snps.index = cis_snps["str.start"].apply(lambda x: "SNP_%s"%int(x))
         print (cis_snps.shape , '##SNPs#')
         cis_variants = cis_snps.loc[cis_snps["str.start"].isin(list(snpgt["start"]))]  ###        
-        #cis_variants = cis_snps.loc[cis_snps['gene']==ensgene]
         cis_snps=cis_variants.sort_values(by="p.wald").head(n=100)
-        #cis_snps.index = cis_snps["str.start"].apply(lambda x: "SNP_%s"%int(x))
+        cis_snps.index = cis_snps["str.start"].apply(lambda x: "SNP_%s"%int(x))
         L=list(cis_snps.index)
     # Pull out cis STR
-
-    # Pull out cis STR
-        PROGRESS("Getting most significant cis STR for %s"%gene)
+        PROGRESS("Getting cis STR for %s"%gene)
         cis_strs = strs[strs["gene"]==ensgene].sort_values("p.wald")
         if cis_strs.shape[0]==0 :
             PROGRESS("There are no STRs found for %s... Gene not in LR table"%gene)
@@ -166,11 +167,10 @@ if __name__ == "__main__":
             continue
         else: 
             cis_strs.index = cis_strs["str.start"].apply(lambda x: "STR_%s"%int(x))
-            best_str_start = int(cis_strs["str.start"].values[0])
             L0 = list(cis_strs.index)
         #
         cis_variants = pd.concat([cis_snps, cis_strs])
-        print(len(L), len(L0), cis_variants.shape)
+        print(len(L), len(L0), len(set(L0)), cis_variants.shape)
     # Make z file data
         Ztable = MakeZScoreTable(cis_variants[['beta','beta.se']])
         if Ztable is None:
@@ -191,6 +191,7 @@ if __name__ == "__main__":
         os.system(caviar_cmd)
     #Output results
         if not os.path.exists(genedir+'/caviar_post'):
+            PROGRESS("CAVIAR did not run for %s"%gene)
             Errorfile.write(gene+": CAVIAR did not run.\n\tERROR: Segmentation fault (core dumped) in log file\n")
             continue
         else:
@@ -198,8 +199,8 @@ if __name__ == "__main__":
             post = post.sort_values(post.columns[2], ascending=False)
             post = post.reset_index(drop=True)
             p = post.head(5)
-            #print (p[0])
             num_str = len([x for x in list(p[0].values) if "STR_" in x])
+            PROGRESS("Top 5 variants CAVIAR scores for %s"%gene)
             if 'STR_' in p[0][0]:
                 topstr = p[0][0]
                 topstrscore = p.values[0][2]
@@ -215,6 +216,7 @@ if __name__ == "__main__":
             strsscores.columns = ['str','score', 'chrom', 'gene']
             with open('strs_score'+CHROM, 'a') as k:
                 (strsscores[['chrom', 'gene','str','score']]).to_csv(k, header=False, index=False, sep='\t')
+            PROGRESS("END CAVIAR run for %s"%gene)
     #   #
             #
     OUT.close()

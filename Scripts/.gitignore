@@ -1,0 +1,8 @@
+*.ipynb_checkpoints*
+*~
+*.bed
+*.txt
+*.csv
+*.tab
+*table
+*.pdf
