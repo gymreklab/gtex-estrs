@@ -80,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--minsamples", help="Require genotypes in at least this many samples. Default: 50", type=int)
     parser.add_argument("--nonorm", help="Don't normalize genotypes, just return raw genotypes in a matrix.", action="store_true")
     parser.add_argument("--mincount", help="Don't return genotypes with less than this many occurrences", type=int)
+    parser.add_argument("--region", help="Only return genotypes in this region. i.e. chr3:1000-2000", type=str)
     parser.add_argument("--alleles", help="Print allele1, allele2 rather than sum of alleles", action="store_true")
     parser.add_argument("--filter", help="Only consider records that passed filters. FILTER is PASS", action="store_true")             ######    
     parser.add_argument("--countfilters", help="Just print out the number of loci filtered by each criteria", action="store_true")
@@ -99,17 +100,30 @@ if __name__ == "__main__":
         MINSAMPLES = args.minsamples
     if args.mincount is not None:
         MINCOUNT = args.mincount
+    if args.region is not None:
+        REG_CHROM,RANGE = args.region.split(':')
+        print('CHROM = {}'.format(REG_CHROM))
+        REG_START,REG_END = RANGE.split('-')
+        print('START = {}'.format(REG_START))
+        print('END = {}'.format(REG_END))
+        # CHECK HERE
     if args.nonorm: NORM=False
     DEBUG = args.debug
     PRINT_ALLELES = args.alleles
     COUNTFILTERS = args.countfilters
-    if args.filter: FILTER=True             ######
+    if args.filter: FILTER=True
 
     VCFFILE = args.vcf
     OUTFILE = args.out
+    
+    # If region is specified, just parse through that.
     vcf_reader = vcf.Reader(open(VCFFILE, "rb"))
-    if SAMPLES == []: SAMPLES = vcf_reader.samples
-    SAMPLES = [item for item in SAMPLES if item in vcf_reader.samples]
+    if args.region is not None:
+        vcf_reads = vcf_reader.fetch(str(REG_CHROM),int(REG_START),int(REG_END))
+    else:
+        vcf_reads = vcf_reader
+    if SAMPLES == []: SAMPLES = vcf_reads.samples
+    SAMPLES = [item for item in SAMPLES if item in vcf_reads.samples]
 
     counters = {
         "numloci": 0,
@@ -124,19 +138,21 @@ if __name__ == "__main__":
         out.write("\t".join(["chrom","start"] + SAMPLES)+"\n")
         
         
-    for record in vcf_reader:
+    for record in vcf_reads:
         if (FILTER==True) and (record.FILTER != [] ): 
             continue
         else:
             print record.ID, '   ', record.FILTER, '   ', record.QUAL
-            if record.call_rate == 0:       # otherwise pyvcf functions break
-                counters["minsamples"] = counters["minsamples"] + 1
-                continue
             counters["numloci"] = counters["numloci"] + 1
-            maf = min([max(record.aaf), 1-max(record.aaf)])
-            if maf < MINMAF:
-                counters["minmaf"] = counters["minmaf"] + 1
-                continue
+            
+            if MINMAF != 0.0:
+                if record.call_rate == 0: # otherwise pyvcf functions break
+                    counters["minsamples"] = counters["minsamples"] + 1
+                    continue
+                maf = min([max(record.aaf), 1-max(record.aaf)])
+                if maf < MINMAF:
+                    counters["minmaf"] = counters["minmaf"] + 1
+                    continue
             chrom = record.CHROM
             if "chr" not in chrom: chrom = "chr%s"%chrom
             pos = record.POS            
