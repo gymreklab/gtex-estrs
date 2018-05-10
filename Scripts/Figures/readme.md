@@ -39,7 +39,7 @@ Supplementary FigureX: This has to do with homopolymers. Need to look at the hom
 
 Supplementary Figure 2:       SNP PCA with 1000 Genomes samples
 
-Supplementary Figure 1:       Profiling STRs in GTEx samples Number of calls/sample Number of samples/locus Heterozygosity vs. previously reported in SGDP (mgymrek TODO) Stutter model summary
+Supplementary Figure 1:       Profiling STRs in GTEx samples Number of calls/sample Number of samples/locus Heterozygosity vs. previously reported in SGDP () Stutter model summary
 
 Supplementary Figure 3:       PEER factor analysis heatmap
 
@@ -48,9 +48,5 @@ Supplementary Figure 4:       Unique vs. shared estrs per tissue
 Supplementary Table 1 :       Litterature Examples
 
 
-#RNA binding proteins
-RBPs have crucial roles in various cellular processes such as: cellular function, transport 
-    and localization. They especially play a major role in post-transcriptional control of RNAs, 
-    such as: splicing, polyadenylation, mRNA stabilization, mRNA localization and translation.
-#transcription factors
+#RNA binding proteins    #transcription factors
 
