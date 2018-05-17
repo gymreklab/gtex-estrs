@@ -54,7 +54,8 @@ def LinearRegression(data, Y, norm=False, minsamples=0, alleles=False):
     print alleles, norm
     if norm:
         if alleles:
-            data['x1+x2'] = data['x1'].astype(float) + data['x2'].astype(float)
+            data['x1']=data['x1'].astype(float) ; data['x2']=data['x2'].astype(float)
+            data['x1+x2'] = data[['x1', 'x2']].sum(axis=1)
             X = ZNorm(data['x1+x2'], None, None)
         else:
             X = ZNorm(data) 
@@ -84,9 +85,13 @@ def QuadraticRegression(data,norm=True, minsamples=120):
     m = np.mean(list(locus_str["x1"].astype(int))+list(locus_str["x2"].astype(int))) 
     sd= math.sqrt(np.var(locus_str["x1"].astype(int) + locus_str["x2"].astype(int) ))
     if norm:
-        data['x1'] = ZNorm(data['x1'].astype(int), sd, m)
-        data['x2'] = ZNorm(data['x2'].astype(int), sd, m)
-        data['expr'] = ZNorm(data['expr'].astype(float), None, None)
+        #data['x1'] = ZNorm(data['x1'].astype(int), sd, m)  
+        #data['x2'] = ZNorm(data['x2'].astype(int), sd, m)
+        #data['expr'] = ZNorm(data['expr'].astype(float), None, None)
+        data.loc[:,'x1'] =ZNorm(data['x1'].astype(int), sd, m)
+        data.loc[:,'x2'] =ZNorm(data['x2'].astype(int), sd, m)       
+        data.loc[:,'expr'] =ZNorm(data['expr'].astype(int), sd, m)
+        
         if data['x1'].isnull().all()  or data['x2'].isnull().all() or data['expr'].isnull().all(): 
             return None, None, None, None, None, None, None  
         
@@ -105,15 +110,17 @@ def QuadraticRegression(data,norm=True, minsamples=120):
 
 def Modelcompare(model1, model2):
     """
-    Performs ANOVA test to compares 2 models 
+    Performs ANOVA test to compares 2 models
+    Here, model1 = Linear regression ,  model2=Quad regression
     Outputs rsquares , delta AIC (aic_model1- aic_model2) and pvalue
     """
     rsq1 = model1.rsquared
     rsq2 = model2.rsquared
     anova_output = sm.stats.anova_lm(model1 , model2)
     anova_pval = anova_output["Pr(>F)"].values[1]
-    delta_aic = model1.aic - model2.aic  
-    return rsq1, rsq2, delta_aic, anova_pval
+    delta_aic = model1.aic - model2.aic 
+    delta_bic = model1.bic - model2.bic
+    return rsq1, rsq2, delta_aic,delta_bic, anova_pval
 
 #arguments help
 if __name__ == "__main__":
@@ -169,7 +176,7 @@ if __name__ == "__main__":
     PROGRESS("Load expression : ALLELE %s"%ALLELE)
     if CHECKCHROM:
         x = list(pd.read_csv(EXPRFILE, nrows=1).columns.values)
-        x = [item for item in x if item == "Unnamed: 0" or CHROM in item]
+        x = [item for item in x if item == "Unnamed: 0" or item == CHROM]
         expr = pd.read_csv(EXPRFILE, usecols=x) # reading all the columns takes way too much memory, pull out only ones needed
     else:
         expr = pd.read_csv(EXPRFILE)
@@ -201,15 +208,15 @@ if __name__ == "__main__":
     #Set up output file
     f = open(OUTFILE, "w")
     if LINEAR_ONLY:
-        f.write("\t".join(["gene", "chrom", "str.id", "str.start", "n.miss", "beta", "beta.se", "lambda.remel", "p.wald"])+"\n")
+        f.write("\t".join([ "chrom", "gene","str.id", "str.start", "n.miss", "beta", "beta.se", "lambda.remel", "p.wald"])+"\n")
     if QUAD:
         if LINEAR and ALLELE:
             if No_ANOVA:
-                f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval"])+"\n")
+                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval"])+"\n")
             else:
-                f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic", "delta_bic", "anova_pva"])+"\n")
+                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic[Lin-Quad]", "delta_bic", "anova_pva"])+"\n")
         else:
-            f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval"])+"\n")
+            f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval"])+"\n")
     
     # For each gene:
     # Pull out STRs within distance of gene ends
@@ -272,18 +279,18 @@ if __name__ == "__main__":
                         f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err] ) )+"\n")
                         pass
                     else:
-                        quad_rsq, lin_rsq, delta_aic, anova_pval = Modelcompare(quad_model, lin_model)
+                        if quad_model==None or lin_model==None:
+                            lin_rsq, quad_rsq, delta_aic,delta_bic, anova_pval= None, None, None, None, None
+                        else:
+                            lin_rsq, quad_rsq, delta_aic,delta_bic, anova_pval = Modelcompare(lin_model , quad_model)
                         
-                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err, pval,quad_rsq, lin_rsq, delta_aic, anova_pval] ) )+"\n")
+                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err, pval,quad_rsq, lin_rsq, delta_aic,delta_bic, anova_pval] ) )+"\n")
             #   #   #
                 else:
                     f.write("\t".join(map(str, [CHROM, gene, test_str, str_start, alpha, alpha_se, alpha_pval, beta, (beta_se), beta_pval] ) )+"\n")
         #   #   #
-        print 'gene ends here!!!'
-        break            
+        print gene,'  gene ends here!!!'            
     f.close()
-
-                        
                            
         
         

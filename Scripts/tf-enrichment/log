@@ -1,0 +1,41 @@
+Finding overlap for tissue Cells-Transformedfibroblasts
+Finding overlap for tissue Artery-Aorta
+Finding overlap for tissue Artery-Tibial
+Finding overlap for tissue Muscle-Skeletal
+Finding overlap for tissue Nerve-Tibial
+Finding overlap for tissue Lung
+Finding overlap for tissue Brain-Cerebellum
+Finding overlap for tissue Skin-SunExposed
+Finding overlap for tissue Thyroid
+Finding overlap for tissue Heart-LeftVentricle
+Finding overlap for tissue WholeBlood
+Finding overlap for tissue Adipose-Visceral
+Finding overlap for tissue Esophagus-Mucosa
+Traceback (most recent call last):
+  File "./fisher_exact.py", line 27, in <module>
+    res = table.apply(GetFisher, 1)
+  File "/usr/lib64/python2.7/site-packages/pandas/core/frame.py", line 4877, in apply
+    ignore_failures=ignore_failures)
+  File "/usr/lib64/python2.7/site-packages/pandas/core/frame.py", line 4973, in _apply_standard
+    results[i] = func(v)
+  File "./fisher_exact.py", line 24, in GetFisher
+    x = scipy.stats.fisher_exact(t)
+  File "/usr/lib64/python2.7/site-packages/scipy/stats/stats.py", line 3109, in fisher_exact
+    raise ValueError("All values in `table` must be nonnegative.")
+ValueError: ('All values in `table` must be nonnegative.', u'occurred at index 101')
+Traceback (most recent call last):
+  File "./fisher_exact.py", line 27, in <module>
+    res = table.apply(GetFisher, 1)
+  File "/usr/lib64/python2.7/site-packages/pandas/core/frame.py", line 4877, in apply
+    ignore_failures=ignore_failures)
+  File "/usr/lib64/python2.7/site-packages/pandas/core/frame.py", line 4973, in _apply_standard
+    results[i] = func(v)
+  File "./fisher_exact.py", line 24, in GetFisher
+    x = scipy.stats.fisher_exact(t)
+  File "/usr/lib64/python2.7/site-packages/scipy/stats/stats.py", line 3109, in fisher_exact
+    raise ValueError("All values in `table` must be nonnegative.")
+ValueError: ('All values in `table` must be nonnegative.', u'occurred at index 596')
+Finding overlap for tissue Brain-Caudate
+Finding overlap for tissue Skin-NotSunExposed
+Finding overlap for tissue Esophagus-Muscularis
+Finding overlap for tissue Adipose-Subcutaneous

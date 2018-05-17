@@ -10,6 +10,7 @@ Scoretype can be:
 
 import os
 import pandas as pd
+import numpy as np
 import sys
 
 SCORETYPES = ["causality", "posterior"]
@@ -34,11 +35,12 @@ for t in tissues:
         data["cis_str_h2"] = data["cis_str_h2"].apply(lambda x: min(1, max(x, 10**-6)))
         data["cis_snp_h2"] = data["cis_snp_h2"].apply(lambda x: min(1, max(x, 10**-6)))
         data["cis_h2"] = data["cis_str_h2"] + data["cis_snp_h2"]
-        data["score"] = data.apply(lambda x: x["best.str.score"]*(x["cis_str_h2"]/(x["cis_h2"])), 1)
+        data["score"] = data.apply(lambda x: x["top.str.score"]*(x["cis_str_h2"]/(x["cis_h2"])), 1)
     elif scoretype == "posterior":
-        data["score"] = data["best.str.score"]
+        data["score"] = data["caviar.score"].astype(float)
     else: data["score"] = -1
-    tissue_data[t] = data[["gene","chrom","best.str.start","top.variant","score","qvalue"]]
+    data['top.variant'] = np.where(data['top.str.score']>data['top.snp.score'], data['top_str'], data['top_snp'])  
+    tissue_data[t] = data[["gene","chrom","best.str.start","top.variant","score","qvalue","llqvalue"]]
     genes = genes.union(set(data["gene"]))
 
 genes = list(genes)
@@ -47,6 +49,7 @@ d_pos = []
 d_score = []
 d_tissue = []
 d_qval = []
+d_lqval = []
 d_tis=[]
 d_top=[]
 for gene in genes:
@@ -55,23 +58,27 @@ for gene in genes:
     best_tissue = "NA"
     best_str = "NA"
     best_q = "NA"
+    best_Lq="NA"
     chrom = "NA"
     top_var = "NA"
     for t in tissues:
         x = tissue_data[t]
         x = x[x["gene"]==gene]
-        if x.shape[0] == 1:
+        if x.shape[0] >= 1:
+            x = x.sort_values(by='score', ascending=False)
             n=n+1
             score = x["score"].values[0]
             chrom = x["chrom"].values[0]
             start = x["best.str.start"].values[0]
             q = x["qvalue"].values[0]
+            lq= x["llqvalue"].values[0]
             v = x["top.variant"].values[0]
             if score > best_score:
                 best_score = score
                 best_tissue = t
                 best_str = start
                 best_q = q
+                best_Lq = lq
                 chrom = chrom
                 top_var = v
     d_chrom.append(chrom)
@@ -79,6 +86,7 @@ for gene in genes:
     d_score.append(best_score)
     d_tissue.append(best_tissue)
     d_qval.append(best_q)
+    d_lqval.append(best_Lq)
     d_tis.append(n)
     d_top.append(top_var)
 df = pd.DataFrame({"gene": genes,
@@ -88,5 +96,6 @@ df = pd.DataFrame({"gene": genes,
                    "top.variant": d_top,
                    "best.tissue": d_tissue,
                    "best.q": d_qval,
+                   "best.llq": d_lqval,
                    "NumTissues":d_tis})
-df[["gene","chrom","best.str.start","best.score","best.q","top.variant","best.tissue","NumTissues"]].to_csv(sys.stdout, sep="\t", index=False)
+df[["gene","chrom","best.str.start","best.score","best.q","top.variant","best.tissue","NumTissues", "best.llq"]].to_csv(sys.stdout, sep="\t", index=False)
