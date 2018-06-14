@@ -54,10 +54,11 @@ def LinearRegression(data, Y, norm=False, minsamples=0, alleles=False):
     print alleles, norm
     if norm:
         if alleles:
-            data['x1+x2'] = data['x1'].astype(float) + data['x2'].astype(float)
+            data['x1']=data['x1'].astype(float) ; data['x2']=data['x2'].astype(float)
+            data['x1+x2'] = data[['x1', 'x2']].sum(axis=1)
             X = ZNorm(data['x1+x2'], None, None)
         else:
-            X = ZNorm(data) 
+            X = ZNorm(data, None, None) 
             Y = ZNorm(Y, None, None)
         if X is None or Y is None: return None, None, None
         if np.var(X)==0: return None, None, None
@@ -84,9 +85,13 @@ def QuadraticRegression(data,norm=True, minsamples=120):
     m = np.mean(list(locus_str["x1"].astype(int))+list(locus_str["x2"].astype(int))) 
     sd= math.sqrt(np.var(locus_str["x1"].astype(int) + locus_str["x2"].astype(int) ))
     if norm:
-        data['x1'] = ZNorm(data['x1'].astype(int), sd, m)
-        data['x2'] = ZNorm(data['x2'].astype(int), sd, m)
-        data['expr'] = ZNorm(data['expr'].astype(float), None, None)
+        #data['x1'] = ZNorm(data['x1'].astype(int), sd, m)  
+        #data['x2'] = ZNorm(data['x2'].astype(int), sd, m)
+        #data['expr'] = ZNorm(data['expr'].astype(float), None, None)
+        data.loc[:,'x1'] =ZNorm(data['x1'].astype(int), sd, m)
+        data.loc[:,'x2'] =ZNorm(data['x2'].astype(int), sd, m)       
+        data.loc[:,'expr'] =ZNorm(data['expr'].astype(int), sd, m)
+        
         if data['x1'].isnull().all()  or data['x2'].isnull().all() or data['expr'].isnull().all(): 
             return None, None, None, None, None, None, None  
         
@@ -105,15 +110,17 @@ def QuadraticRegression(data,norm=True, minsamples=120):
 
 def Modelcompare(model1, model2):
     """
-    Performs ANOVA test to compares 2 models 
+    Performs ANOVA test to compares 2 models
+    Here, model1 = Linear regression ,  model2=Quad regression
     Outputs rsquares , delta AIC (aic_model1- aic_model2) and pvalue
     """
     rsq1 = model1.rsquared
     rsq2 = model2.rsquared
     anova_output = sm.stats.anova_lm(model1 , model2)
     anova_pval = anova_output["Pr(>F)"].values[1]
-    delta_aic = model1.aic - model2.aic  
-    return rsq1, rsq2, delta_aic, anova_pval
+    delta_aic = model1.aic - model2.aic 
+    delta_bic = model1.bic - model2.bic
+    return rsq1, rsq2, delta_aic,delta_bic, anova_pval
 
 #arguments help
 if __name__ == "__main__":
@@ -157,19 +164,21 @@ if __name__ == "__main__":
     if args.linear_only: LINEAR_ONLY = True
     if args.linear: LINEAR = True
     if args.debug: DEBUG = True
+    if args.alleles: 
+            ALLELE = True
     if args.quadratic: 
         QUAD = True
-        if args.alleles: 
-            ALLELE = True
-        else:
+        if not ALLELE:
             sys.stderr.write("ERROR: Input genotypes entered should be in the form (allele1,allele2) for quadratic regression\n OR --alleles option missing \n")  ;   sys.exit(1)            
         if args.noanova: No_ANOVA = True
 ###
+    if not QUAD:
+        LINEAR_ONLY = True
     # Load expression values
     PROGRESS("Load expression : ALLELE %s"%ALLELE)
     if CHECKCHROM:
         x = list(pd.read_csv(EXPRFILE, nrows=1).columns.values)
-        x = [item for item in x if item == "Unnamed: 0" or CHROM in item]
+        x = [item for item in x if item == "Unnamed: 0" or item == CHROM]
         expr = pd.read_csv(EXPRFILE, usecols=x) # reading all the columns takes way too much memory, pull out only ones needed
     else:
         expr = pd.read_csv(EXPRFILE)
@@ -201,15 +210,15 @@ if __name__ == "__main__":
     #Set up output file
     f = open(OUTFILE, "w")
     if LINEAR_ONLY:
-        f.write("\t".join(["gene", "chrom", "str.id", "str.start", "n.miss", "beta", "beta.se", "lambda.remel", "p.wald"])+"\n")
+        f.write("\t".join([ "chrom", "gene","str.id", "str.start", "n.miss", "beta", "beta.se", "lambda.remel", "p.wald"])+"\n")
     if QUAD:
         if LINEAR and ALLELE:
             if No_ANOVA:
-                f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval"])+"\n")
+                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval"])+"\n")
             else:
-                f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic", "delta_bic", "anova_pva"])+"\n")
+                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic[Lin-Quad]", "delta_bic", "anova_pva"])+"\n")
         else:
-            f.write("\t".join(["gene", "chrom", "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval"])+"\n")
+            f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval"])+"\n")
     
     # For each gene:
     # Pull out STRs within distance of gene ends
@@ -235,30 +244,23 @@ if __name__ == "__main__":
             locus_str.columns = ["STR_%s"%(cis_strs["start"].values[j])]
             test_str=locus_str.columns[0]
             str_start = cis_strs["start"].values[j]
-            if LINEAR_ONLY:
-            #None as genotype
+            if ALLELE:
+                    locus_str['x1'] = locus_str[test_str].apply(lambda x: x.split(',')[0] )
+                    locus_str['x2'] = locus_str[test_str].apply(lambda x: x.split(',')[1] )
+                    samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if (str(locus_str['x1'].values[k]) != "NA")and(str(locus_str['x2'].values[k]) != "NA")]
+            else:
                 samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if str(locus_str.iloc[:,0].values[k]) != "None" ]
-                if ALLELE:
-                    locus_str['x1'] = locus_str[test_str].apply(lambda x: x.split(',')[0] )
-                    locus_str['x2'] = locus_str[test_str].apply(lambda x: x.split(',')[1] )
-                locus_str = locus_str.loc[samples_to_keep,:]
-                
-            if QUAD:
-                if ALLELE:
-                    locus_str['x1'] = locus_str[test_str].apply(lambda x: x.split(',')[0] )
-                    locus_str['x2'] = locus_str[test_str].apply(lambda x: x.split(',')[1] )
-            #NA|NA as genotype
-                    samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if (str(locus_str['x1'].values[k]) != "NA")or(str(locus_str['x2'].values[k]) != "NA")]
-                    locus_str = locus_str.loc[samples_to_keep,:]
-                else:
+                if QUAD:
                     sys.exit(1)      #This should not happen
+                    
+            locus_str = locus_str.loc[samples_to_keep,:]
             #Expression
             locus_y = y.loc[samples_to_keep,:]
             Locus_data = locus_str.join(locus_y)
             
 ## Run regression
             if LINEAR_ONLY:
-                beta, beta_se, p = LinearRegression(locus_str, locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES, alleles=ALLELE)
+                res_ols,beta, beta_se, p = LinearRegression(locus_str, locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES, alleles=ALLELE)
                 if beta is not None:
                     f.write("\t".join(map(str, [gene, CHROM, "STR_%s"%str_start, str_start, len(str_samples)-locus_str.shape[0], beta, beta_se, -1, p]))+"\n")
             
@@ -269,27 +271,17 @@ if __name__ == "__main__":
                     data = Locus_data[['x1','x2']]
                     lin_model, slope, err, pval = LinearRegression(data, locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES, alleles=ALLELE)
                     if No_ANOVA:
-                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err] ) )+"\n")
+                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err, pval] ) )+"\n")
                         pass
                     else:
-                        quad_rsq, lin_rsq, delta_aic, anova_pval = Modelcompare(quad_model, lin_model)
+                        if quad_model==None or lin_model==None:
+                            lin_rsq, quad_rsq, delta_aic,delta_bic, anova_pval= None, None, None, None, None
+                        else:
+                            lin_rsq, quad_rsq, delta_aic,delta_bic, anova_pval = Modelcompare(lin_model , quad_model)
                         
-                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err, pval,quad_rsq, lin_rsq, delta_aic, anova_pval] ) )+"\n")
+                        f.write("\t".join(map(str, [CHROM, gene, test_str, str_start,alpha, alpha_se, alpha_pval, beta, beta_se, beta_pval, slope, err, pval,quad_rsq, lin_rsq, delta_aic,delta_bic, anova_pval] ) )+"\n")
             #   #   #
                 else:
                     f.write("\t".join(map(str, [CHROM, gene, test_str, str_start, alpha, alpha_se, alpha_pval, beta, (beta_se), beta_pval] ) )+"\n")
-        #   #   #
-        print 'gene ends here!!!'
-        break            
+        #   #   #          
     f.close()
-
-                        
-                           
-        
-        
-
-    
-
-
-
-
