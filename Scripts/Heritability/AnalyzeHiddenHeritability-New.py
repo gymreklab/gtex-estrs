@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--snp-fdr-threshold", help="Cutoff for FDR (SNPs)", type=float, required=False, default=1)
     parser.add_argument("--expr", help="Normalized expression residuals", type=str, required=True)
     parser.add_argument("--exprannot", help="Expression annotation file", type=str, required=True)
-    parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=True)
+    parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=False)
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--nohead", help="Don't print header", action="store_true")
@@ -72,11 +72,13 @@ if __name__ == "__main__":
     
     # Load SNP genotypes
     PROGRESS("Load SNPs", printit=DEBUG)
-    snpgt = pd.read_csv(SNPGTFILE, sep="\t", low_memory=False)
+    snpgt = pd.read_csv(SNPGTFILE, sep="\t",low_memory=False)
+    if CHROM: snpgt = snpgt[snpgt['chrom']==CHROM]
 
     # Load STR genotypes
     PROGRESS("Load STRs", printit=DEBUG)
-    strgt = pd.read_csv(STRGTFILE, sep="\t")
+    strgt = pd.read_csv(STRGTFILE, sep="\t", low_memory=False)
+    if CHROM: strgt = strgt[strgt['chrom']==CHROM]
 
     # Restrict to samples with data in all three (SNP, STR, expression)
     in_str_samples = set(strgt.columns[2:].values)
@@ -90,50 +92,52 @@ if __name__ == "__main__":
     # Load eQTL results
     PROGRESS("Load eQTL results", printit=DEBUG)
     estr_results = pd.read_csv(ESTR_RESULTS_FILE, sep="\t")
-    esnp_results = pd.read_csv(ESNP_RESULTS_FILE, sep="\t", low_memory=False)
+    esnp_results = pd.read_csv(ESNP_RESULTS_FILE, sep="\t")
     if CHROM: 
         estr_results = estr_results[estr_results['chrom']==CHROM]
         esnp_results = esnp_results[esnp_results['chrom']==CHROM]
+        
     if DEBUG: print 'eqtl outputs loaded ', estr_results.shape, '\t',esnp_results.shape
 
     # Print output header
     if not NOHEAD:
-        print ",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic"])
+        print ",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic","number_top_snp"])
 
     # For each gene in results:
     # Pull out passing eSNPs and eSTRs
     # Build STR, SNP, and SNPSTR model
     # Get r2 for each model and run Anova + BIC
     if DEBUG: print CHROM,'---fdr-method----', STR_FDR_METHOD, '---treshold---',STR_FDR_THRESHOLD 
+    
     estr_results = estr_results[(estr_results["chrom"]==CHROM) & (estr_results[STR_FDR_METHOD]<=STR_FDR_THRESHOLD)]
     if DEBUG: print estr_results.columns
-    
-    if STR_FDR_METHOD == "qval.gene":
-        estr_results = estr_results[estr_results["best_str"]==1]
-        if DEBUG: print estr_results.columns,'*******\n'
-        
-        
     esnp_results = esnp_results[(esnp_results["chrom"]==CHROM) & (esnp_results[SNP_FDR_METHOD]<=SNP_FDR_THRESHOLD)]
     if DEBUG: print esnp_results.shape , '------\n', esnp_results.columns
     
-    
+    if STR_FDR_METHOD == "qval.gene":
+        estr_results = estr_results[estr_results["best_str"]==1]
     if SNP_FDR_METHOD == "qval.gene":
         esnp_results = esnp_results[esnp_results["best_str"]==1]
     
-    allgenes = set(estr_results['gene'])          
+    allgenes = set(estr_results['gene'])          #set(estr_results["gene"].values)
     for ensgene in allgenes:
+        #print'***********', ensgene
         estr_fdr = min(estr_results[estr_results["gene"]==ensgene][STR_FDR_METHOD])
         esnp_fdr = min(esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD])
         probes = expr_annot[expr_annot["gene.id"]==ensgene]["probe.id"].values
         if len(probes) != 1:
-            PROGRESS("ERROR: no unique probe for for %s"%ensgene)
+            PROGRESS("ERROR: no unique probe for %s"%ensgene)
             continue
         else: probe = probes[0]
         PROGRESS("Getting data for %s (%s)"%(ensgene, probe), printit=DEBUG)
-        # Get eSTRs
+        if esnp_fdr==[] or estr_fdr==[]:
+            PROGRESS("ERROR: qvalue for %s was not calculated for one these (SNPs or STRs)"%ensgene, printit=DEBUG)
+            continue
+        PROGRESS("Getting data for %s (%s)"%(ensgene, probe), printit=DEBUG)
+        # Get eSTRs   &   eSNPs
         estrs = estr_results[(estr_results["gene"]==ensgene)]
-        # get eSNPs
         esnps = esnp_results[(esnp_results["gene"]==ensgene)]
+        esnps = esnps.sort_values(SNP_FDR_METHOD).head(20)
         # Get genotypes and expression values
         y = pd.DataFrame({"expr":list(expr.loc[:,probe])})
         y.index = str_samples
@@ -154,20 +158,20 @@ if __name__ == "__main__":
                                if (str(locus_str.iloc[:,0].values[k]) != "None" \
                                    and (str(locus_snp.iloc[:,0].values[k]) != "None"))]
             locus_str = locus_str.loc[samples_to_keep,:]
-
             locus_snp = locus_snp.loc[samples_to_keep,:]
             locus_y = y.loc[samples_to_keep,:]
             # Get data frame with relevant variables
-            d = {"STR": ZNorm(locus_str.iloc[:,0].apply(float).values), "expr": ZNorm(locus_y["expr"].values)}
+            d = {"STR": ZNorm(locus_str.iloc[:,0].replace('None', np.nan).astype(float).values), "expr": ZNorm(locus_y["expr"].values)}
             for k in range(locus_snp.shape[1]):
-                snps = ZNorm(locus_snp.iloc[:,k].values)
+                snps = ZNorm(locus_snp.iloc[:,k].replace('None', np.nan).astype(float).values)
                 if snps is not None:
                     d["SNP%s"%k] = snps
             genedata = pd.DataFrame(d)
             # Run regression with SNPs
             if locus_snp.shape[1] > 0 and "SNP0" in genedata.columns:
                 snpstring = "+".join([item for item in list(genedata.columns) if "SNP" in item])
-                formula_snpstr = "expr ~ STR + " + snpstring
+                #print snpstring
+                formula_snpstr = "expr ~ STR+" + snpstring
                 formula_snp = "expr ~ " + snpstring
                 formula_str = "expr ~ STR"
                 lm_snpstr = ols(formula_snpstr, genedata).fit()
@@ -184,7 +188,7 @@ if __name__ == "__main__":
                 pval = anova_results["Pr(>F)"].values[1]
                 print ",".join(map(str, [CHROM, ensgene, cis_strs["start"].values[i], locus_snp.shape[1],\
                                               locus_y.shape[0], str_rsq, snp_rsq, snpstr_rsq, pval, estr_fdr, esnp_fdr,\
-                                             bic_snp-bic_snpstr, aic_snp-aic_snpstr]))
+                                             bic_snp-bic_snpstr, aic_snp-aic_snpstr, len(genedata.columns)-1]))
             else:
                 formula_str = "expr ~ STR"
                 lm_str = ols(formula_str, genedata).fit()
