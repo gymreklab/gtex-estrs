@@ -2,6 +2,7 @@
 import argparse
 import math
 import numpy as np
+import pandas as pd
 import sys
 import vcf
 
@@ -12,6 +13,7 @@ MINMAF = 0.0
 GTFIELD = "GT"
 MINSAMPLES = 50
 MINCOUNT = 1
+MINGENOTYPES = 1
 NORM = True
 COUNTFILTERS = False
 DEBUG = False
@@ -79,7 +81,8 @@ if __name__ == "__main__":
     parser.add_argument("--gtfield", help="Which field to get genotypes from. Default: GT", type=str)
     parser.add_argument("--minsamples", help="Require genotypes in at least this many samples. Default: 50", type=int)
     parser.add_argument("--nonorm", help="Don't normalize genotypes, just return raw genotypes in a matrix.", action="store_true")
-    parser.add_argument("--mincount", help="Don't return genotypes with less than this many occurrences", type=int)
+    parser.add_argument("--mincount", help="Don't return genotypes with less than this many occurrences. Default: 1", type=int)
+    parser.add_argument("--mingenotypes", help="Require at last this many genotypes at one locus. Default: 1", type=int)
     parser.add_argument("--region", help="Only return genotypes in this region. i.e. chr3:1000-2000", type=str)
     parser.add_argument("--alleles", help="Print allele1, allele2 rather than sum of alleles", action="store_true")
     parser.add_argument("--filter", help="Only consider records that passed filters. FILTER is PASS", action="store_true")             ######    
@@ -100,10 +103,16 @@ if __name__ == "__main__":
         MINSAMPLES = args.minsamples
     if args.mincount is not None:
         MINCOUNT = args.mincount
+    if args.mingenotypes is not None:
+        MINGENOTYPES = args.mingenotypes
     if args.region is not None:
-        REG_CHROM,RANGE = args.region.split(':')
+        try:
+            REG_CHROM,RANGE = args.region.split(':')
+            REG_START,REG_END = RANGE.split('-')
+        except:
+            REG_CHROM = args.region
+            REG_START,REG_END = None, None
         print('CHROM = {}'.format(REG_CHROM))
-        REG_START,REG_END = RANGE.split('-')
         print('START = {}'.format(REG_START))
         print('END = {}'.format(REG_END))
         # CHECK HERE
@@ -119,7 +128,10 @@ if __name__ == "__main__":
     # If region is specified, just parse through that.
     vcf_reader = vcf.Reader(open(VCFFILE, "rb"))
     if args.region is not None:
-        vcf_reads = vcf_reader.fetch(str(REG_CHROM),int(REG_START),int(REG_END))
+        try:
+            vcf_reads = vcf_reader.fetch(str(REG_CHROM),int(REG_START),int(REG_END))
+        except:
+            vcf_reads = vcf_reader.fetch(str(REG_CHROM))
     else:
         vcf_reads = vcf_reader
     if SAMPLES == []: SAMPLES = vcf_reads.samples
@@ -129,6 +141,7 @@ if __name__ == "__main__":
         "numloci": 0,
         "minmaf": 0,
         "minsamples": 0,
+        "mingenotypes":0,
         "novar": 0,
         "keepers": 0
         }
@@ -158,6 +171,15 @@ if __name__ == "__main__":
             pos = record.POS            
             genotypes = [GetGT(checkgt(record,s)) for s in SAMPLES]
             print record.ID, ' ', len(genotypes), ' ', record.FORMAT  ###
+            
+            # This section is checking for minimum num of genotypes and counts/genotype
+            gt_sum = [sum(gt) if gt is not None else None for gt in genotypes]
+            unique_vals = pd.Series(gt_sum).value_counts(dropna=True)
+            good_gts = unique_vals[unique_vals >= MINCOUNT].index
+            if len(good_gts) < MINGENOTYPES:
+                counters["mingenotypes"] = counters["mingenotypes"] + 1
+                continue
+            genotypes = [genotypes[i] if gt_sum[i] in good_gts else None for i in range(len(gt_sum))]
             if len([item for item in genotypes if item is not None]) < MINSAMPLES:
                 counters["minsamples"] = counters["minsamples"] + 1
                 continue
