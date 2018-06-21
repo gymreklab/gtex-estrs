@@ -1,3 +1,6 @@
+For running notebooks you should run the the notebook named gtex_variables to initalize the colors and tissues short names first.
+OR
+initalize them directly.
 
 Figure1         qqplot
                 Effect size comparison
@@ -18,13 +21,25 @@ Figure 3 & X :Examples with biological insights
         (2) eSTRs that overlap RBPs 
         (3)eSTRs effects on transcription factors (TFs) 
         (4)eSTRs that overlap transcrion factors
+        
+Figure4: Analyzing non linear regression
+    (1) Number of eSTRs using non linear regression
+    (2) Particular observation 
 
 
-                 Supp Figures         
+Figure5: Pull out some GWAS examples 
+        (1) plot expression vs the STR genotype
+        (2) plot LOcus zoom
+
+
+                 Supp Figures
+                 
+Supplementary FigureX: This has to do with homopolymers. Need to look at the homopolymers specifically
+                including their locatiopn, their occurence and length, possible biological insights
 
 Supplementary Figure 2:       SNP PCA with 1000 Genomes samples
 
-Supplementary Figure 1:       Profiling STRs in GTEx samples Number of calls/sample Number of samples/locus Heterozygosity vs. previously reported in SGDP (mgymrek TODO) Stutter model summary
+Supplementary Figure 1:       Profiling STRs in GTEx samples Number of calls/sample Number of samples/locus Heterozygosity vs. previously reported in SGDP () Stutter model summary
 
 Supplementary Figure 3:       PEER factor analysis heatmap
 
@@ -33,15 +48,5 @@ Supplementary Figure 4:       Unique vs. shared estrs per tissue
 Supplementary Table 1 :       Litterature Examples
 
 
-
-
-
-
-
-
-#RNA binding proteins
-RBPs have crucial roles in various cellular processes such as: cellular function, transport 
-    and localization. They especially play a major role in post-transcriptional control of RNAs, 
-    such as: splicing, polyadenylation, mRNA stabilization, mRNA localization and translation.
-#transcription factors
+#RNA binding proteins    #transcription factors
 
