@@ -42,6 +42,7 @@ def WriteCorrTable(indexed_genotypes):
     return pd.DataFrame(CMat,columns=variants, index=variants) 
 
 def lookfor (x,p):
+    """look for occurence of x in frame column p and output now numb, ID and score"""
     for row in range(1,len(p.index)):
         if x in p.values[row][0]:
             top = p.values[row][0]
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     snpgt = snpgt[["chrom","start"] + str_samples]
     snpgt.index = list(snpgt["start"].apply(lambda x: "SNP_%s"%int(x)))
     strgt = strgt[["chrom","start"] + str_samples]
-    try:
+    try:           #Control for inexisting STRs (Should not happen)
         strgt.index = list(strgt["start"].apply(lambda x: "STR_%s"%int(x)))
     except:
         print strgt
@@ -150,20 +151,20 @@ if __name__ == "__main__":
     # Pull out cis SNPs
         PROGRESS("Getting cis SNPs for %s"%gene)
         cis_snps = snps[(snps["str.start"] >= (start-DISTFROMGENE)) & (snps["str.start"] <= (end+DISTFROMGENE))]
-        cis_snps = cis_snps.loc[cis_snps['gene']==ensgene]
+        #cis_snps = cis_snps.loc[cis_snps['gene']==ensgene] #removed...cis SNPs don't have to be on the gene 
         print (cis_snps.shape , '##SNPs#')
         cis_variants = cis_snps.loc[cis_snps["str.start"].isin(list(snpgt["start"]))]  ###        
-        cis_snps=cis_variants.sort_values(by="p.wald").head(n=100)
+        cis_snps=cis_variants.sort_values(by="p.wald").head(n=100).copy()
         cis_snps.index = cis_snps["str.start"].apply(lambda x: "SNP_%s"%int(x))
         L=list(cis_snps.index)
-    # Pull out cis STR
-        PROGRESS("Getting cis STR for %s"%gene)
+    # Pull out all cis STRs
+        PROGRESS("Getting cis STRs for %s"%gene)
         cis_strs = strs[strs["gene"]==ensgene].sort_values("p.wald")
         if cis_strs.shape[0]==0 :
-            PROGRESS("There are no STRs found for %s... Gene not in LR table"%gene)
+            PROGRESS("There are no STRs found for %s... Gene possibly not in LR table"%gene)
             continue
         elif cis_snps.shape[0]<=1:
-            PROGRESS("There are no or not enough SNPs found for %s... Gene not in LR table"%gene)
+            PROGRESS("There are no or not enough SNPs found for %s... Or gene not in LR table"%gene)
             continue
         else: 
             cis_strs.index = cis_strs["str.start"].apply(lambda x: "STR_%s"%int(x))
@@ -209,7 +210,10 @@ if __name__ == "__main__":
                 topsnp = p[0][0]
                 topsnpscore = p.values[0][2]
                 I, topstr , topstrscore =lookfor('STR_',post)
+#Output top 5 variants by score values ... The rest can be found on caviar_post fine in gene DIR
             OUT.write("\t".join([CHROM, gene, str(num_str),topsnp,str(topsnpscore),str(topstr), str(topstrscore),str(I+1)])+'\n')
+
+    #retrieve STR(s) scores from the CAVIAR output 
             strsscores = post.loc[post[0].isin(cis_strs.index)][[0,2]]
             strsscores['chrom']=[CHROM]*strsscores.shape[0]
             strsscores['gene']= [gene]*strsscores.shape[0]

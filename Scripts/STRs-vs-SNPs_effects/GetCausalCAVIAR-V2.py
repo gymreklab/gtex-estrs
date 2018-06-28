@@ -160,10 +160,6 @@ if __name__ == "__main__":
 
         cis_variants=cis_variants.sort_values(by="p.wald").head(n=100)
         cis_variants.index = cis_variants["str.start"].apply(lambda x: "SNP_%s"%int(x))
-
-
-        
-        
         
         if T.shape[0]==0:
             PROGRESS("There are no STRs found for %s... Gene not in LR table"%gene)

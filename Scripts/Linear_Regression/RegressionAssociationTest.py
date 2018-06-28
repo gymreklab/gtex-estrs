@@ -54,8 +54,12 @@ def LinearRegression(data, Y, norm=False, minsamples=0, alleles=False):
     print alleles, norm
     if norm:
         if alleles:
-            data['x1']=data['x1'].astype(float) ; data['x2']=data['x2'].astype(float)
-            data['x1+x2'] = data[['x1', 'x2']].sum(axis=1)
+            
+            data.loc[:,"x1"] = [int(r) for r in list(data['x1'])]
+            data.loc[:,"x2"] = [int(r) for r in list(data['x2'])]
+            #data['x1']=data['x1'].astype(float) ; data['x2']=data['x2'].astype(float)
+            data.loc[:,'x1+x2'] = data[['x1', 'x2']].copy().sum(axis=1)
+            print data.head(5)
             X = ZNorm(data['x1+x2'], None, None)
         else:
             X = ZNorm(data) 
@@ -65,7 +69,7 @@ def LinearRegression(data, Y, norm=False, minsamples=0, alleles=False):
         if len(X) <= minsamples: return None, None, None
     else:
         X = data
-        print 'Here!!!!!!'
+        print 'Here!!!'
     X = sm.add_constant(X)
     mod_ols = sm.OLS(Y, X, missing='drop')
     res_ols = mod_ols.fit()
@@ -85,13 +89,9 @@ def QuadraticRegression(data,norm=True, minsamples=120):
     m = np.mean(list(locus_str["x1"].astype(int))+list(locus_str["x2"].astype(int))) 
     sd= math.sqrt(np.var(locus_str["x1"].astype(int) + locus_str["x2"].astype(int) ))
     if norm:
-        #data['x1'] = ZNorm(data['x1'].astype(int), sd, m)  
-        #data['x2'] = ZNorm(data['x2'].astype(int), sd, m)
-        #data['expr'] = ZNorm(data['expr'].astype(float), None, None)
         data.loc[:,'x1'] =ZNorm(data['x1'].astype(int), sd, m)
         data.loc[:,'x2'] =ZNorm(data['x2'].astype(int), sd, m)       
-        data.loc[:,'expr'] =ZNorm(data['expr'].astype(int), sd, m)
-        
+        data.loc[:,'expr'] =ZNorm(data['expr'].astype(float), None, None)
         if data['x1'].isnull().all()  or data['x2'].isnull().all() or data['expr'].isnull().all(): 
             return None, None, None, None, None, None, None  
         
@@ -116,10 +116,13 @@ def Modelcompare(model1, model2):
     """
     rsq1 = model1.rsquared
     rsq2 = model2.rsquared
+    print rsq1, rsq2
     anova_output = sm.stats.anova_lm(model1 , model2)
     anova_pval = anova_output["Pr(>F)"].values[1]
+    
     delta_aic = model1.aic - model2.aic 
     delta_bic = model1.bic - model2.bic
+    print '...Anova output: \n' , anova_output, "\nLinear_aic: ", model1.aic," Quad_aic: ", model2.aic, "Linear_bic: ", model1.bic," Quad_bic: ", model2.bic 
     return rsq1, rsq2, delta_aic,delta_bic, anova_pval
 
 #arguments help
@@ -128,6 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("--expr", help="Normalized expression residuals", type=str, required=True)
     parser.add_argument("--exprannot", help="Expression annotation file", type=str, required=True)
     parser.add_argument("--chrom", help="Restrict analysis to this chromosome", type=str, required=False)
+    parser.add_argument("--gene", help="Restrict analysis to this gene", type=str, required=False)
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--scriptdir", help="Directory containing scripts", type=str, required=False)
     parser.add_argument("--checkchrom", help="Only load exons for relevant chromosome", action="store_true")
@@ -160,6 +164,7 @@ if __name__ == "__main__":
     if args.scriptdir is not None: SCRIPTDIR = args.scriptdir
     if args.checkchrom: CHECKCHROM = True
     if args.tmpdir is not None: TMPDIR = args.tmpdir
+    if args.gene is not None: MYGENE = args.gene
     if args.permute: PERMUTE_EXPR = True
     if args.linear_only: LINEAR_ONLY = True
     if args.linear: LINEAR = True
@@ -190,6 +195,7 @@ if __name__ == "__main__":
     expr_annot.index = expr_annot["probe.id"].values
     expr_annot = expr_annot.loc[[item for item in expr.columns if item in expr_annot.index],:]
     expr_annot = expr_annot[expr_annot["gene.chr"] == CHROM]
+    if MYGENE: expr_annot = expr_annot[expr_annot.index == MYGENE]
 
     # Load STR genotypes
     PROGRESS("Load STRs")
@@ -214,7 +220,7 @@ if __name__ == "__main__":
             if No_ANOVA:
                 f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval"])+"\n")
             else:
-                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic[Lin-Quad]", "delta_bic", "anova_pva"])+"\n")
+                f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval", "linear.beta", "linear.beta.se", "linear.pval","quad_rsq", "lin_rsq", "delta_aic[Lin-Quad]", "delta_bic", "anova_pval"])+"\n")
         else:
             f.write("\t".join(["chrom","gene",  "str.id", "str.start","alpha", "alpha.se", "alpha.pval", "beta", "beta.se", "beta.pval"])+"\n")
     
@@ -242,6 +248,7 @@ if __name__ == "__main__":
             locus_str.columns = ["STR_%s"%(cis_strs["start"].values[j])]
             test_str=locus_str.columns[0]
             str_start = cis_strs["start"].values[j]
+            print '\n\nSTR__',str_start
             if LINEAR_ONLY:
             #None as genotype
                 samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if str(locus_str.iloc[:,0].values[k]) != "None" ]
@@ -256,6 +263,7 @@ if __name__ == "__main__":
                     locus_str['x2'] = locus_str[test_str].apply(lambda x: x.split(',')[1] )
             #NA|NA as genotype
                     samples_to_keep = [str_samples[k] for k in range(len(str_samples)) if (str(locus_str['x1'].values[k]) != "NA")or(str(locus_str['x2'].values[k]) != "NA")]
+                    print 'Sample to use here: ', len(samples_to_keep)
                     locus_str = locus_str.loc[samples_to_keep,:]
                 else:
                     sys.exit(1)      #This should not happen
