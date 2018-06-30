@@ -142,6 +142,7 @@ if __name__ == "__main__":
         y = pd.DataFrame({"expr":list(expr.loc[:,probe])})
         y.index = str_samples
         cis_snps = snpgt[snpgt["start"].apply(lambda x: x in list(esnps["str.start"].values))]
+        PROGRESS(" %s : Number of  SNP data"%str(cis_snps.shape[0]))
         cis_strs = strgt[strgt["start"].apply(lambda x: x in list(estrs["str.start"].values))]
         # Run one analysis per STR
         for i in range(cis_strs.shape[0]):
