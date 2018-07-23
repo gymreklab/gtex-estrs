@@ -1,0 +1,1 @@
+chrom,gene,str.start,numsnps,numsamples,r2_str,r2_snp,r2_snpstr,anova_pval,estr_fdr,esnp_fdr,delta_bic,delta_aic,number_top_snp

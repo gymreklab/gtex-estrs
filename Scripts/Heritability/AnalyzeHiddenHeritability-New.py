@@ -10,7 +10,7 @@ from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
 
 """
-Analyze h2 gain in adding eSTRs vs. eSNPs
+Analyze h2 gain in adding eSTRs vs. eSNPs **Control for chromosome added. Contol for a list of genes added
 """
 
 def ZNorm(vals):
@@ -43,8 +43,9 @@ if __name__ == "__main__":
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--nohead", help="Don't print header", action="store_true")
     parser.add_argument("--debug", help="Print debug status messages", action="store_true")
+    parser.add_argument("--gene-list", help="Restrict analysis to these genes", type=str, required=False)
     args = parser.parse_args()
-    ESTR_RESULTS_FILE = args.estrs
+    ESTR_RESULTS_FILE = args.estrs 
     ESNP_RESULTS_FILE = args.esnps
     SNP_FDR_METHOD = args.snp_fdr_method
     SNP_FDR_THRESHOLD = args.snp_fdr_threshold
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     EXPRFILE = args.expr
     EXPRANNOTFILE = args.exprannot
     CHROM = args.chrom
+    GENE_FILE = args.gene_list
     if "chr" not in str(CHROM): CHROM="chr%s"%CHROM
     STRGTFILE = args.strgt
     SNPGTFILE = args.snpgt
@@ -95,10 +97,9 @@ if __name__ == "__main__":
     esnp_results = pd.read_csv(ESNP_RESULTS_FILE, sep="\t")
     if CHROM: 
         estr_results = estr_results[estr_results['chrom']==CHROM]
-        esnp_results = esnp_results[esnp_results['chrom']==CHROM]
-        
+        esnp_results = esnp_results[esnp_results['chrom']==CHROM]       
     if DEBUG: print 'eqtl outputs loaded ', estr_results.shape, '\t',esnp_results.shape
-
+    
     # Print output header
     if not NOHEAD:
         print ",".join(["chrom","gene","str.start","numsnps","numsamples","r2_str","r2_snp","r2_snpstr","anova_pval","estr_fdr","esnp_fdr","delta_bic","delta_aic","number_top_snp"])
@@ -108,7 +109,6 @@ if __name__ == "__main__":
     # Build STR, SNP, and SNPSTR model
     # Get r2 for each model and run Anova + BIC
     if DEBUG: print CHROM,'---fdr-method----', STR_FDR_METHOD, '---treshold---',STR_FDR_THRESHOLD 
-    
     estr_results = estr_results[(estr_results["chrom"]==CHROM) & (estr_results[STR_FDR_METHOD]<=STR_FDR_THRESHOLD)]
     if DEBUG: print estr_results.columns
     esnp_results = esnp_results[(esnp_results["chrom"]==CHROM) & (esnp_results[SNP_FDR_METHOD]<=SNP_FDR_THRESHOLD)]
@@ -119,9 +119,14 @@ if __name__ == "__main__":
     if SNP_FDR_METHOD == "qval.gene":
         esnp_results = esnp_results[esnp_results["best_str"]==1]
     
-    allgenes = set(estr_results['gene'])          #set(estr_results["gene"].values)
+    allgenes = [x for x in set(estr_results['gene']) if x in set(esnp_results['gene'])] #set(estr_results["gene"])
+    if GENE_FILE: 
+        exclusive_genes_list = [ x.strip("'").split(',') for x in open(GENE_FILE, 'r').readlines() ]
+        allgenes = [x for x in allgenes if x in exclusive_genes_list]
+        PROGRESS("ANOVA was restricted to %s genes.... %s genes were not filtered out (may be eSTRs) and will be analyzed."%(str(len(exclusive_genes_list)), str(len(allgenes))))
+        
     for ensgene in allgenes:
-        #print'***********', ensgene
+        #print'***********', ensgene, esnp_results[esnp_results["gene"]==ensgene].shape
         estr_fdr = min(estr_results[estr_results["gene"]==ensgene][STR_FDR_METHOD])
         esnp_fdr = min(esnp_results[esnp_results["gene"]==ensgene][SNP_FDR_METHOD])
         probes = expr_annot[expr_annot["gene.id"]==ensgene]["probe.id"].values

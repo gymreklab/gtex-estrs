@@ -172,7 +172,7 @@ if __name__ == "__main__":
             
             #ignore locus if number of #genotype <3
             if len(set(locus_str.iloc[:,0].values)) < MINGENOTYPE: 
-                print locus_str.columns[0], ' skipped ................'
+                print locus_str.columns[0], ' skipped ................', len(set(locus_str.iloc[:,0].values)),' genotypes only'
                 continue
             PROGRESS('After clean up... %s'%str(locus_y.shape))
           

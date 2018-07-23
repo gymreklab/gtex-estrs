@@ -9,7 +9,9 @@ import sys
 import gzip
 
 """
-Quantify the probability of a variant to be causal. We may later allow for arbitrary number of causal variants
+Quantify the probability (p()) of a variant to be causal. 
+p() is calculated for top 100 SNPs and only the best STR or eSTR within distance
+We may later allow for arbitrary number of causal variants
 """
 
 def PROGRESS(msg, printit=True):

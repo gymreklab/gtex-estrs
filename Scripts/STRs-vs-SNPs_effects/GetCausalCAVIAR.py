@@ -8,6 +8,13 @@ import shutil
 import sys
 import gzip
 
+"""
+Quantify the probability (p()) of a variant to be causal. 
+p() is calculated for top 100 SNPs and all STRs within distance
+In this version we also output in order the scores for all variants per gene in a separate file as apposed to just the best STR and top variant (SNP or STR) as before.
+We may later allow for arbitrary number of causal variants. 
+"""
+
 def PROGRESS(msg, printit=True):
     if printit: # false for some messages when not in debug mode
         sys.stderr.write("%s\n"%msg.strip())
@@ -19,6 +26,7 @@ def MakeZScoreTable(vals):
         Zscore=None
     return Zscore
 
+
 def WriteCorrTable(indexed_genotypes):
     """ generate correlation table using normalized genotype
       _1_ ... _n_
@@ -27,6 +35,8 @@ def WriteCorrTable(indexed_genotypes):
     n|Cn1 ... Cnn=1
     """
     G=indexed_genotypes.transpose()
+    try: G = G.loc[:, ~G.columns.duplicated()]
+    except: pass
     variants = list(G.columns)
     CMat=[]
     for V1 in variants:
@@ -34,12 +44,14 @@ def WriteCorrTable(indexed_genotypes):
         for V2 in variants:
             X=G[V1].replace('None', np.nan).astype(float)
             Y=G[V2].replace('None', np.nan).astype(float)
-            if X.corr(Y) is np.nan :   #
+            if X.corr(Y) is np.nan:    
                 COV.append(0.0) #For missing LD we assume non linear corr (undetermined LD)
             else:
                 COV.append(X.corr(Y))
         CMat.append(COV)
+    #print ('**', len(variants), G.shape, pd.DataFrame(CMat,columns=variants, index=variants).shape )
     return pd.DataFrame(CMat,columns=variants, index=variants) 
+
 
 def lookfor (x,p):
     """look for occurence of x in frame column p and output now numb, ID and score"""
@@ -83,7 +95,6 @@ if __name__ == "__main__":
         os.mkdir(TMPDIR)
 
     # Load expression
-    DEBUG =False
     PROGRESS("\nLoad expression", printit=DEBUG)
     expr = pd.read_csv(EXPRFILE)
     samples_to_keep = list(expr.index)
@@ -123,7 +134,7 @@ if __name__ == "__main__":
     except:
         print strgt
         sys.exit(1)
-    print strgt.head(3)
+    #print strgt.head(3)
     # Load eSTR results
     PROGRESS("Restrict to eSTR genes only", printit=DEBUG)
     if ESTRGENESFILE is not None:
@@ -151,8 +162,7 @@ if __name__ == "__main__":
     # Pull out cis SNPs
         PROGRESS("Getting cis SNPs for %s"%gene)
         cis_snps = snps[(snps["str.start"] >= (start-DISTFROMGENE)) & (snps["str.start"] <= (end+DISTFROMGENE))]
-        #cis_snps = cis_snps.loc[cis_snps['gene']==ensgene] #removed...cis SNPs don't have to be on the gene 
-        print (cis_snps.shape , '##SNPs#')
+        cis_snps = cis_snps.loc[cis_snps['gene']==ensgene] #cis SNPs tested on the same gene 
         cis_variants = cis_snps.loc[cis_snps["str.start"].isin(list(snpgt["start"]))]  ###        
         cis_snps=cis_variants.sort_values(by="p.wald").head(n=100).copy()
         cis_snps.index = cis_snps["str.start"].apply(lambda x: "SNP_%s"%int(x))
@@ -171,7 +181,6 @@ if __name__ == "__main__":
             L0 = list(cis_strs.index)
         #
         cis_variants = pd.concat([cis_snps, cis_strs])
-        print(len(L), len(L0), len(set(L0)), cis_variants.shape)
     # Make z file data
         Ztable = MakeZScoreTable(cis_variants[['beta','beta.se']])
         if Ztable is None:

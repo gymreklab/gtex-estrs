@@ -2,7 +2,7 @@
 
 """
 Recalculate and merge causality scores from all tissues
-Usage: ./merge_causality_scores.py <basedir> <tissuelist> <scoretype>
+Usage: ./merge_causality_scores.py <basedir> <tissuelist> <scoretype> <estr-only>
 Scoretype can be:
 - causality
 - posterior
@@ -12,7 +12,7 @@ import os
 import pandas as pd
 import numpy as np
 import sys
-
+ESTR=False
 SCORETYPES = ["causality", "posterior"]
 try:
     basedir = sys.argv[1]
@@ -24,12 +24,19 @@ try:
 except:
     sys.stderr.write(__doc__)
     sys.exit(1)
-
+try:
+    if sys.argv[4] in ['estrs', 'estr-only','True','true', 'TRUE']:
+        ESTR = True
+except:
+    print ("All STRs are included")
+    
 # Load data for each tissue, keep list of genes
 tissue_data = {}
 genes = set()
 for t in tissues:
     data = pd.read_csv(os.path.join(basedir, t, "Master.table"), sep="\t")
+    if ESTR:
+        data = data.loc[data['qvalue']<0.1].copy()
     # Recalculate causality score
     if scoretype == "causality":
         data["cis_str_h2"] = data["cis_str_h2"].apply(lambda x: min(1, max(x, 10**-6)))
@@ -41,7 +48,7 @@ for t in tissues:
     else: data["score"] = -1
     #data['top.variant'] = np.where(data['top.str.score']>data['top.snp.score'], data['top_str'], data['top_snp'])  
     tissue_data[t] = data[["gene","chrom","best.str.start","top.variant","score","qvalue","llqvalue","gene.name"]]
-    genes = genes.union(set(data["gene"]))
+    genes = genes.union(set(data["gene"]));  # print len(gene)
 
 genes = list(genes)
 d_chrom = []

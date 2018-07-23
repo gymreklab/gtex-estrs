@@ -9,7 +9,8 @@ import sys
 import gzip
 
 """
-Quantify the probability of a variant to be causal. We may later allow for arbitrary number of causal variants
+Quantify the probability (p()) of a variant to be causal. p() is calculated for top 100 SNPs and all STRs within distance
+We may later allow for arbitrary number of causal variants. 
 """
 
 def PROGRESS(msg, printit=True):
@@ -162,7 +163,7 @@ if __name__ == "__main__":
         cis_variants.index = cis_variants["str.start"].apply(lambda x: "SNP_%s"%int(x))
         
         if T.shape[0]==0:
-            PROGRESS("There are no STRs found for %s... Gene not in LR table"%gene)
+            PROGRESS("There are no STRs found for %s... Gene might not be in LR table"%gene)
             continue
         else: 
             best_str_start = int(T["str.start"].values[0])
@@ -175,7 +176,6 @@ if __name__ == "__main__":
             del cis_strs['ID']
         except:
             pass
-
         cis_variants = pd.concat(cis_variants, cis_strs)
 
         L=list(cis_variants.index)#############
