@@ -6,7 +6,7 @@ Download BED files for TFBS from ENCODE
 Usage:
 ./download_tfbps.py <accs> <outdir>
 
-e.g. ./download_tfbps.py encode_tfhistone_files.txt /storage/mgymrek/gtex/tfbs/encodedata
+outdir='/storage/szfeupe/Runs/650GTEx_estr/tfbs/encodedata'
 """
 
 import os
