@@ -90,7 +90,7 @@ for gene in genes:
             if state != old_state:  #This only happens when comparing scores for simple STR and eSTR
                 continue            # eSTR score is prefered to non eSTRs GOTO next tissue
                 
-            if score > best_score: 
+            if score >= best_score: 
                 best_score = score
                 best_tissue = t
                 best_str = start

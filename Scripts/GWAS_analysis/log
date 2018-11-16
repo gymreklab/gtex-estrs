@@ -1,0 +1,65 @@
+#param.sh
+
+OUTDIR=/storage/szfeupe/Runs/650GTEx_estr/gwas
+GWASCAT=/storage/szfeupe/Runs/650GTEx_estr/gwas/gwas_catalog_loci_all.tab 
+HIPREF=/storage/resources/dbase/human/hg19/hg19.hipstr_reference_withmotif.bed
+WINDOW=50000
+SNPVCF=/storage/resources/datasets/gtex/59533/PhenoGenotypeFiles/RootStudyConsentSet_phs000424.GTEx.v7.p2.c1.GRU/GenotypeFiles/phg000830.v1.GTEx_WGS.genotype-calls-vcf.c1/GTEx_Analysis_2016-01-15_v7_WholeGenomeSeq_652Ind_GATK_HaplotypeCaller.vcf.gz
+STRVCF=/storage/szfeupe/Runs/650GTEx_estr/Filter_Merged_STRs_All_Samples_New.vcf.gz
+CAUSAL=/storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Merged_Best_causality.Table
+
+
+
+#echo "Get all nearby STRs...."
+cat $gwas_catalog_loci_all.tab  | grep -v chrom | awk '{print $1 "\t" $2 "\t" $2+1 "\t" $0}' > ${OUTDIR}/tmp/allgwas.bed
+
+
+cat /storage/resources/dbase/human/hg19/hg19.hipstr_reference_withmotif.bed | sed 's/chr//' | \
+            awk -v"window=50000" '{print $1 "\t"  ($2<50000?0:$2-50000) "\t" $3+50000 "\t" $0}' | \
+            intersectBed -a stdin -b /storage/szfeupe/Runs/650GTEx_estr/gwas/tmp/allgwas.bed -wa -wb | \
+            cut -f 1-3 --complement  > /storage/szfeupe/Runs/650GTEx_estr/gwas/tmp/str_gwas_overlaps_ALL.bed
+
+
+
+cat /storage/szfeupe/Runs/650GTEx_estr/gwas/tmp/str_gwas_overlaps_ALL.bed | \
+            cut -f 1,2,7 | uniq > ${OUTDIR}/tmp/str_gwas_coords_ALL.tab
+
+##cat tmp/tmp_sv_overlaps.bed | cut -f 1,2,7 | uniq >tmp/str_gwas_coords_sv.tab
+
+
+
+
+
+##### Get SNP-STR LD
+echo "Get SNP-STR LD..."
+
+~/projects/GTEX_eSTRs/gtex-estrs/Scripts/GWAS_analysis/snp_str_ld_calculator_MG.py \
+    --str-vcf ${STRVCF} \
+    --snp-vcf ${SNPVCF} \
+    --loci-file ${OUTDIR}/tmp/str_gwas_coords_${PREFIX}.tab \
+    --use-info-start --mincount 3 --usefilter --use-gb > /storage/szfeupe/Runs/650GTEx_estr/gwas/tmp/str_gwas_ld_hg19_ALL.tab 
+    
+    cat str_gwas_ld_hg19_ALL.tab | uniq | sort > snp_str_gwas_ld_hg19_ALL.tab #I used this for the notebook
+    From this point I used the notebook in    ~/projects/GTEX_eSTRs/gtex-estrs/Scripts/GWAS_analysis/get_gwas_loci_format
+    
+
+
+###
+
+    cat tmp/str_gwas_ld_hg19_ALL.tab | uniq  | awk '$7>=0.5' > str_snp_ld_05_up.tab
+    cat tmp/str_gwas_ld_hg19_ALL.tab | uniq  | awk '$7>=0.1' > str_snp_ld_01_up.tab
+    cat snp_str_gwas_ld_hg19_ALL.tab | awk '($7>0.5 && $8<0.05 && $8>0)' | sort >sorted_ld.bed
+    
+    
+###
+
+    cat tmp/str_gwas_ld_hg19_ALL.tab | grep -v 'locus1' | sed 's/:/\t/g' | \
+            awk '{print $1 "\t" $2 "\t" $2+1 "\t" $0}' | \
+            intersectBed -a stdin -b tmp/str_gwas_overlaps_ALL.bed -wa -wb |\
+            awk '( ($2==$15) && ($7==$20) )' | cut -f 4,5,12,17,17,18,20,24- > str_gwas_ld_combined_ALL.tab
+
+###############
+
+
+
+

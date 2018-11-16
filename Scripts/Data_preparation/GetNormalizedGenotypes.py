@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get normalized genotypes")
     parser.add_argument("--samples", help="File containing list of samples to include (default: all)", type=str)
     parser.add_argument("--vcf", help="VCF file with genotypes", type=str, required=True)
+    parser.add_argument("--chrom", help="rectrict operation on this chromosome", type=str, required=False)
     parser.add_argument("--out", help="Output file", type=str)
     parser.add_argument("--minmaf", help="Only include SNPs with at least this MAF in EUR (default: 0.0). If in INFO field, use that. Else calculate the MAF", type=float)
     parser.add_argument("--gtfield", help="Which field to get genotypes from. Default: GT", type=str)
@@ -99,6 +100,8 @@ if __name__ == "__main__":
         MINSAMPLES = args.minsamples
     if args.mincount is not None:
         MINCOUNT = args.mincount
+    if args.chrom is not None:
+        CHROM = args.chrom
     if args.nonorm: NORM=False
     DEBUG = args.debug
     PRINT_ALLELES = args.alleles
@@ -107,7 +110,10 @@ if __name__ == "__main__":
 
     VCFFILE = args.vcf
     OUTFILE = args.out
-    vcf_reader = vcf.Reader(open(VCFFILE, "rb"))
+    if CHROM:
+        vcf_reader = vcf.Reader(open(VCFFILE, "rb")).fetch(CHROM)
+    else:
+        vcf_reader = vcf.Reader(open(VCFFILE, "rb"))
     if SAMPLES == []: SAMPLES = vcf_reader.samples
     SAMPLES = [item for item in SAMPLES if item in vcf_reader.samples]
 
@@ -130,19 +136,19 @@ if __name__ == "__main__":
         else:
             print record.ID, '   ', record.FILTER, '   ', record.call_rate
 ###This below has been commented because of the merging of VCF which rendered record.aff to be unreliable with pyvcf. We no longer filter these in this step
-#            if record.call_rate == 0:       # otherwise pyvcf functions break
-#                counters["minsamples"] = counters["minsamples"] + 1
-#                continue
+            if record.call_rate == 0:       # otherwise pyvcf functions break
+                counters["minsamples"] = counters["minsamples"] + 1
+                continue
             counters["numloci"] = counters["numloci"] + 1
-#            maf = min([max(record.aaf), 1-max(record.aaf)])
-#            if maf < MINMAF:
-#                counters["minmaf"] = counters["minmaf"] + 1
-#                continue
+            maf = min([max(record.aaf), 1-max(record.aaf)])
+            if maf < MINMAF:
+                counters["minmaf"] = counters["minmaf"] + 1
+                continue
             chrom = record.CHROM
             if "chr" not in chrom: chrom = "chr%s"%chrom
             pos = record.POS            
             genotypes = [GetGT(checkgt(record,s)) for s in SAMPLES]
-            print record.ID, ' ', len(genotypes), ' ', record.FORMAT  ###
+            #print record.ID, ' ', len(genotypes), ' ', record.FORMAT  ###
             if len([item for item in genotypes if item is not None]) < MINSAMPLES:
                 counters["minsamples"] = counters["minsamples"] + 1
                 continue

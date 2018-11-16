@@ -21,14 +21,14 @@ table = pd.read_csv(tfile, sep="\t", names=["category", "AA","AB","BA","BB"])
 
 def GetFisher(x):
     t = [[x["AA"], x["AB"]],[x["BA"],x["BB"]]]
-    print t
+    #print t
     x = scipy.stats.fisher_exact(t)
     return ",".join(map(str, x))
 
 
 res = table.apply(GetFisher, 1)
-print res.head(10)
+#print res.head(10)
 table["oddsratio"] = res.apply(lambda x: x.split(",")[0])
 table["pval"] = res.apply(lambda x: x.split(",")[1])
-print table.head(10)
+#print table.head(10)
 table.to_csv(sys.stdout, sep="\t", index=False)
