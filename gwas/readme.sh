@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# T2D
-./run.sh /storage/mgymrek/gtex/gwas/summarystats/Scott_etal_Diagram_T2D_hits.tab T2D
+# Get GWAS overlaps
+./get_gwas_overlaps.sh
 
-# SCZ
-./run.sh /storage/mgymrek/gtex/gwas/summarystats/PGC_SCZ2_hits_v2.txt SCZ2
+# Filter gwas tables and get supp dataset 2
+./filter_gwas.sh GWASCAT2
 
-# Height
-./run.sh /storage/mgymrek/gtex/gwas/summarystats/Height_Yengo_2018.txt Height
