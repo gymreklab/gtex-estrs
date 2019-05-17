@@ -1,0 +1,34 @@
+# Example how to run
+# Run from /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/$TISSUE/HH
+# (although may want to change usage)
+
+# Example output: /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/WholeBlood/HH/CAVIAR_wg.csv
+
+chrm=$1
+
+expr='../Corr_Expr.csv'
+anot='/storage/resources/dbase/human/hg19/gencode_gene_annotations_hg19.csv'
+dist=100000
+strg='/storage/szfeupe/Runs/650GTEx_estr/Genotypes/NormalizedGenotypes.table'
+snpg='/storage/szfeupe/Runs/650GTEx_estr/SNP_Analysis/chr'$1.tab
+OUT='caviar.out'$1
+lstr='../Lin_Reg_Out'
+lsnp='../SNP_Analysis/Lin_Reg_Out'
+tmpd='caviar_temps'
+estr='../PQValues'
+output='Causality_scores.tab'
+
+
+python ~/projects/GTEX_eSTRs/gtex-estrs/Scripts/STRs-vs-SNPs_effects/GetCausalCAVIAR.py \
+--expr $expr \
+--exprannot $anot \
+--chrom $1 \
+--distfromgene 100000 \
+--strgt $strg \
+--snpgt $snpg \
+--linreg_str $lstr \
+--linreg_snp $lsnp \
+--tmpdir $tmpd \
+--out $OUT \
+--debug \
+ --restrict_to_estrs $estr
