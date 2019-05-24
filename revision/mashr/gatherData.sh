@@ -41,7 +41,7 @@ for tissue in $tissuetypes ; do
 
 	if [ "$testrun" = true ]; then
 		#only use chromosome 1 in testing
-		command="${command} | grep -P '(chr1\t)|(chrom)'"
+		command="${command} | grep -P '(chr21\t)|(chrom)'"
 	fi
 	command="${command} > ./workdir/$tissue.table"
 	eval $command
