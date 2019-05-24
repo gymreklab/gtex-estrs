@@ -1,6 +1,6 @@
 #!/bin/R
 
-#------------------Load the data into two arrays----------------
+#------------------Load the data into one big dataframe----------------
 library('purrr')
 #get files to load
 files = list.files(path="workdir", pattern="*.table", full.names=TRUE)
@@ -23,11 +23,23 @@ dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta.se'))
 
 allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start')))
 
+#-------------------------Hand off to mashr------------------------
+library(mashr)
+
 #move gene, str idetnifier info into rownames
 rownames(allData) = purrr::pmap(allData[c(1,2,3)], paste, sep='_')
 allData = allData[-(1:3)]
 betas = allData[!grepl('se', colnames(allData))]
 beta.ses = allData[grepl('se', colnames(allData))]
 
-#-------------------------Hand off to mashr------------------------
-library(mashr)
+#hand the data off to mashr
+prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
+mashrData = mash_set_data(prep$Bhat, prep$Shat)
+
+#get the covariance matricies
+U.c = cov_canonical(mashrData)
+
+#fit the model
+m.c = mash(mashrData, U.c)
+
+
