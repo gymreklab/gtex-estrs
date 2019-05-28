@@ -1,9 +1,18 @@
-#!/bin/R
+#!/usr/bin/env Rscript
+
+testrun=TRUE
+if (testrun) {
+	workdir = 'testrun'
+} else {
+	workdir = 'fullrun'
+}
+indir = paste(workdir, '/input', sep='')
+outdir = paste(workdir, '/output', sep='')
 
 print('----Load the data into two dataframes----')
 library('purrr')
 #get files to load
-files = list.files(path="workdir/input", pattern="*.table", full.names=TRUE)
+files = list.files(path=indir, pattern="*.table", full.names=TRUE)
 shortFileNames = purrr::map(files, function(name) basename(tools::file_path_sans_ext(name)))
 
 #load files individually
@@ -70,8 +79,12 @@ m.1by1 = mash_1by1(mashrData)
 strong = get_significant_results(m.1by1,0.05)
 
 #run pca then extreme deconvolution to learn effect patterns from data
-#TODO, this should be 5 when not using test data
-pca_cov_matrices = cov_pca(mashrData, 2, subset=strong)
+if (testrun) {
+	num_components = 2 #not enough tissues to use 5 components in the test run
+} else {
+	num_components = 5
+}
+pca_cov_matrices = cov_pca(mashrData, num_components, subset=strong)
 ed_cov_matrices = cov_ed(mashrData, pca_cov_matrices, subset=strong) #?? what does this step do?
 canonical_cov_matrices = cov_canonical(mashrData)
 
@@ -79,24 +92,35 @@ cov_matrices = c(canonical_cov_matrices, ed_cov_matrices)
 
 #3)fit the model and save its output
 mashrOutput = mash(mashrData, cov_matrices)
-saveRDS(mashrOutput, 'workdir/output/mashrOutput.rds')
+saveRDS(mashrOutput, paste(outdir, '/mashrOutput.rds', sep=''))
 
 lfsr = get_lfsr(mashrOutput)
-write.table(lfsr, 'workdir/output/posterior_lfsr.tsv', sep="\t", col.names=NA, quote=FALSE)
-posterior_betas = get_pm(mashrOutupt)
-write.table(posterior_betas, 'workdir/output/posterior_betas.tsv', sep="\t", col.names=NA, quote=FALSE)
+write.table(lfsr, paste(outdir, '/posterior_lfsr.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+posterior_betas = get_pm(mashrOutput)
+write.table(posterior_betas, paste(outdir, '/posterior_betas.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 posterior_beta_ses = get_psd(mashrOutput)
-write.table(posterior_beta_ses, 'workdir/output/posterior_beta_ses.tsv', sep="\t", col.names=NA, quote=FALSE)
+write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 
 
 #4)
-#Create correlation plot
+#Create correlation plots heatmaps
 #From this vignette https://stephenslab.github.io/mashr/articles/mash_sampling.html
 #would like to use the sampling based method - should be more conservative, but it uses R instead of C backing and this seems to slow (could try waiting)
 library(corrplot)
 sharing = get_pairwise_sharing(mashrOutput, factor = 0.5)
-png('workdir/output/corrHeatmap.png')
+png(paste(outdir, '/significantEffectSharing.png', sep=''))
 corrplot(sharing, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0))
 dev.off()
 
+sig = get_significant_results(mashrOutput)
+secorr = cor(get_pm(mashrOutput)[sig, ])
+png(paste(outdir, '/significantEffectCorr.png', sep=''))
+corrplot(secorr, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0))
+dev.off()
+
+
 #TODO : run without the various optimizations to see what changes
+#Are we using EZ model or EE model? Mentioned in paper
+#The paper initializes extreme deconvolution in a more sophisticated manner than the above
+	#Should we do that?
+
