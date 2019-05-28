@@ -1,9 +1,9 @@
 #!/bin/R
 
-#------------------Load the data into two dataframes----------------
+print('----Load the data into two dataframes----')
 library('purrr')
 #get files to load
-files = list.files(path="workdir", pattern="*.table", full.names=TRUE)
+files = list.files(path="workdir/input", pattern="*.table", full.names=TRUE)
 shortFileNames = purrr::map(files, function(name) basename(tools::file_path_sans_ext(name)))
 
 #load files individually
@@ -35,7 +35,7 @@ beta.ses = allData[grepl('se', colnames(allData))]
 colnames(betas) = purrr::map(colnames(betas), substring, 6)
 colnames(beta.ses) = purrr::map(colnames(beta.ses), substring, 9)
 
-#-------------------------Use mashr------------------------
+print('----Use mashr----')
 library(mashr)
 #For overall coding pattern, look at this vignette:
 #https://stephenslab.github.io/mashr/articles/intro_mash.html
@@ -47,7 +47,10 @@ mashrData = mash_set_data(prep$Bhat, prep$Shat)
 #1.5)
 #account for correlation among samples
 sample_corr = estimate_null_correlation_simple(mashrData)
-mashrData = mash_update_data(mashrData, sample_corr)
+mashrData = mash_update_data(mashrData, V=sample_corr)
+
+#1.6)
+#should we be doing this: https://stephenslab.github.io/mashr/articles/intro_mashnobaseline.html ?
 
 #2)get the covariance matricies between tissue types
 #for this specific section, look at this vignette
@@ -72,9 +75,28 @@ pca_cov_matrices = cov_pca(mashrData, 2, subset=strong)
 ed_cov_matrices = cov_ed(mashrData, pca_cov_matrices, subset=strong) #?? what does this step do?
 canonical_cov_matrices = cov_canonical(mashrData)
 
-cov_matrices = c(canonical_co_matrices, ed_cov_matrices)
+cov_matrices = c(canonical_cov_matrices, ed_cov_matrices)
 
-#3)fit the model
+#3)fit the model and save its output
 mashrOutput = mash(mashrData, cov_matrices)
+saveRDS(mashrOutput, 'workdir/output/mashrOutput.rds')
+
+lfsr = get_lfsr(mashrOutput)
+write.table(lfsr, 'workdir/output/posterior_lfsr.tsv', sep="\t", col.names=NA, quote=FALSE)
+posterior_betas = get_pm(mashrOutupt)
+write.table(posterior_betas, 'workdir/output/posterior_betas.tsv', sep="\t", col.names=NA, quote=FALSE)
+posterior_beta_ses = get_psd(mashrOutput)
+write.table(posterior_beta_ses, 'workdir/output/posterior_beta_ses.tsv', sep="\t", col.names=NA, quote=FALSE)
 
 
+#4)
+#Create correlation plot
+#From this vignette https://stephenslab.github.io/mashr/articles/mash_sampling.html
+#would like to use the sampling based method - should be more conservative, but it uses R instead of C backing and this seems to slow (could try waiting)
+library(corrplot)
+sharing = get_pairwise_sharing(mashrOutput, factor = 0.5)
+png('workdir/output/corrHeatmap.png')
+corrplot(sharing, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0))
+dev.off()
+
+#TODO : run without the various optimizations to see what changes
