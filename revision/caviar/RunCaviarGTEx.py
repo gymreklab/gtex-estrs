@@ -53,7 +53,16 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
     strdata[["ID", "Z"]].to_csv(open(zfile, "w"), header=None, index=False, sep="\t")
     snpdata[["ID", "Z"]].to_csv(open(zfile, "a"), header=None, index=False, sep="\t")
     # 2. Get LDFILE for only that set of variants
+    str_genotypes = LoadGenotypes(strgt, str_gt_ind, strdata)
+    snp_genotypes = LoadGenotypes(snpgt, snp_gt_ind, snpdata)
+    # TODO: concatenate these
+    # TODO: pairwise correlation (is there a function for this?)
+    # TODO: Write to a file
     pass # TODO
+
+def LoadGenotypes(gtfile, gtind, regdata):
+    # TODO open file with tabix, get only variants in regdata in exact same order
+    return [] # TODO return 2d array of row=variant, column=gt for all samples in gtind. Note gtind-2 is index in file
 
 def GetGenotypeIndices(strgtfile, snpgtfile, samples):
     str_samples = [item.decode('UTF-8') for item in (gzip.open(strgtfile, "r").readline().strip().split()[2:])]
