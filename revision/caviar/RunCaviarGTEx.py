@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 # Example
-# ./RunCaviarGTEx.py --linreg_snp /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/SNP_Analysis/Lin_Reg_Out --linreg_str /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/Lin_Reg_Out --samples /home/mgymrek/workspace/gtex-estrs/revision/caviar/samples/Nerve-Tibial.samples --strgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/gtex_strgt.tab --snpgt /storage/mgymrek/gtex-estrs/revision/caviar/genotype/gtex_snpgt.tab --out test --genes ENSG00000160213.5 --tmpdir test/
+# ./RunCaviarGTEx.py --linreg_snp /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/SNP_Analysis/Lin_Reg_Out --linreg_str /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/Lin_Reg_Out --samples /storage/mgymrek/gtex-estrs/revision/caviar/samples/Nerve-Tibial.samples --strgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test --genes ENSG00000160213.5 --tmpdir test/
 
 # Notes:
 # Make STR and SNP genotypes indexed, maybe all in one file to keep sample order same?
 
 import argparse
+import gzip
 import os
 import pandas as pd
 import sys
@@ -42,6 +43,7 @@ def LoadReg(linreg, genes, prefix="", tempdir="/tmp"):
 # Write LDFILE, ZFILE
 def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
                         use_topn_strs, use_topn_snps, \
+                        str_gt_ind, snp_gt_ind, \
                         tmpdir):
     if not os.path.exists(os.path.join(tmpdir, gene)): os.mkdir(os.path.join(tmpdir, gene))
     strdata = strreg[strreg["gene"]==gene].sort_values("p.wald").head(use_topn_strs)
@@ -52,6 +54,14 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
     snpdata[["ID", "Z"]].to_csv(open(zfile, "a"), header=None, index=False, sep="\t")
     # 2. Get LDFILE for only that set of variants
     pass # TODO
+
+def GetGenotypeIndices(strgtfile, snpgtfile, samples):
+    str_samples = [item.decode('UTF-8') for item in (gzip.open(strgtfile, "r").readline().strip().split()[2:])]
+    snp_samples = [item.decode('UTF-8') for item in gzip.open(snpgtfile, "r").readline().strip().split()[2:]]
+    use_samples = (set(str_samples).intersection(set(snp_samples))).intersection(samples)
+    str_ind = [str_samples.index(item) for item in use_samples]
+    snp_ind = [snp_samples.index(item) for item in use_samples]
+    return str_ind, snp_ind, use_samples
 
 # Run CAVIAR using LDFILE and ZFILE in tmp/
 # Write output to tmp/
@@ -91,6 +101,9 @@ if __name__ == "__main__":
         # Get list of samples to process
         samples = LoadSamples(args.samples)
 
+        # Get sample indices for genotype data
+        str_gt_ind, snp_gt_ind, samples = GetGenotypeIndices(args.strgt, args.snpgt, samples)
+
     # For each gene:
     # 1. Get intermediate files
     # 2. Run CAVIAR
@@ -100,6 +113,7 @@ if __name__ == "__main__":
         if not args.precomputed: # Store in args.tmpdir/gene/ LDFILE, ZFILE
              GenerateCAVIARFiles(gene, samples, strreg, snpreg, args.strgt, args.snpgt, \
                                  args.use_topn_strs, args.use_topn_snps, \
+                                 str_gt_ind, snp_gt_ind, \
                                  args.tmpdir)
         RunCAVIAR(gene, args.tmpdir)
         WriteOutput(gene, args.tmpdir, args.out)
