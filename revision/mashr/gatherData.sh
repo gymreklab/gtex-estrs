@@ -1,6 +1,7 @@
 #!/bin/bash
 
 testrun=false
+testrun2Chroms=true
 
 #example where I learned this from
 # ls -ld /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/* | grep '^d' | sed -e 's/\s\+/ /g' | cut -f 9 -d ' '
@@ -37,12 +38,18 @@ if [ "$testrun" = true ]; then
 	testtissues='Artery-Aorta Artery-Tibial Lung'
 	tissuetypes=$testtissues
 	workdir='testrun'
+elif [ "$testrun2Chroms" = true ]; then
+	#only use three tissues - two similar, one not, in testing
+	testtissues='Artery-Aorta Artery-Tibial Lung'
+	tissuetypes=$testtissues
+	workdir='testrun2Chroms'
 else
 	workdir='fullrun'
 fi
 
 mkdir -p ${workdir}/output
 mkdir -p ${workdir}/input
+mkdir -p ${workdir}/intermediate
 
 #Example command
 #cat /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/WholeBlood/Master.table | awk -F"\t" '{print $1 "\t" $2 "\t" $3 "\t" $7 "\t" $27}' | head
@@ -54,6 +61,8 @@ for tissue in $tissuetypes ; do
 	if [ "$testrun" = true ]; then
 		#only use chromosome 21 in testing
 		command="${command} | grep -P '(chr21\t)|(chrom)'"
+	elif [ "$testrun2Chroms" = true ]; then
+		command="${command} | grep -P '(chr21\t)|(chrom)|(chr22\t)'"
 	fi
 	command="${command} > ./${workdir}/input/$tissue.table"
 	eval $command
