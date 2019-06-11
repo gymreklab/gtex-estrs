@@ -2,3 +2,5 @@ temp
 .nbgrader.log
 *.swp
 fullrun
+fullrunOutput.txt
+

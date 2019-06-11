@@ -1,6 +1,6 @@
 #!/bin/bash
 
-testrun=true
+testrun=false
 
 #example where I learned this from
 # ls -ld /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/* | grep '^d' | sed -e 's/\s\+/ /g' | cut -f 9 -d ' '
@@ -16,8 +16,6 @@ Cells-Transformedfibroblasts
 Esophagus-Mucosa
 Esophagus-Muscularis
 Heart-LeftVentricle
-Kidney-Cortex
-Liver
 Lung
 Muscle-Skeletal
 Nerve-Tibial
@@ -26,6 +24,13 @@ Skin-SunExposed(Lowerleg)
 Thyroid
 WholeBlood
 '
+
+#Don't seem to have tables
+#'Kidney-Cortex Liver '
+
+
+#escape the tissue types
+tissuetypes=$(printf '%q ' $tissuetypes)
 
 if [ "$testrun" = true ]; then
 	#only use three tissues - two similar, one not, in testing

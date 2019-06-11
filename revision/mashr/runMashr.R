@@ -19,6 +19,9 @@ shortFileNames = purrr::map(files, function(name) basename(tools::file_path_sans
 #lung.table <- read.table("Lung.table", header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
 dataFrameList = purrr::map(files, read.table, header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
 
+#some rows are duplicated for some reason, so remove them
+dataFrameList = purrr::map(dataFrameList, function(x) x[!duplicated(x), ])
+
 #append the file name to the columns named beta and beta.se
 append = function (name) {
 	function (df, ext) {
@@ -31,6 +34,7 @@ dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta'))
 dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta.se'))
 
 #merge the dataframes
+#In the full run, this will be sized: 226562 obs. of  37 variables:
 allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start')))
 
 #move gene, str idetnifier info into rownames
@@ -38,8 +42,8 @@ rownames(allData) = purrr::pmap(allData[c(1,2,3)], paste, sep='_')
 allData = allData[-(1:3)]
 
 #separate betas and beta.ses
-betas = allData[!grepl('se', colnames(allData))]
-beta.ses = allData[grepl('se', colnames(allData))]
+betas = allData[!grepl('beta.se', colnames(allData))]
+beta.ses = allData[grepl('beta.se', colnames(allData))]
 
 colnames(betas) = purrr::map(colnames(betas), substring, 6)
 colnames(beta.ses) = purrr::map(colnames(beta.ses), substring, 9)
@@ -100,7 +104,9 @@ posterior_betas = get_pm(mashrOutput)
 write.table(posterior_betas, paste(outdir, '/posterior_betas.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 posterior_beta_ses = get_psd(mashrOutput)
 write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
-
+log10bf = get_log10bf(mashrOutput)
+rownames(log10bf) = rownames(posterior_beta_ses)
+write.table(log10bf, paste(outdir, '/posterior_log10bf.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 
 #4)
 #Create correlation plots heatmaps
