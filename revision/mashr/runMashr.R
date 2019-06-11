@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
 
-testrun=TRUE
+testrun=FALSE
+testrun2Chroms=FALSE
 if (testrun) {
 	workdir = 'testrun'
+} else if (testrun2Chroms) {
+	workdir = 'testrun2Chroms'
 } else {
 	workdir = 'fullrun'
 }
@@ -70,6 +73,7 @@ prepMashr = function(betas, beta.ses, intermediate) {
 	sample_corr = estimate_null_correlation_simple(mashrData)
 	mashrData = mash_update_data(mashrData, V=sample_corr)
 	saveRDS(mashrData, paste(intermediate, '/mashrData.rds', sep=''))
+	saveRDS(sample_corr, paste(intermediate, '/sample_corr.rds', sep=''))
 
 	#1.6)
 	#should we be doing this: https://stephenslab.github.io/mashr/articles/intro_mashnobaseline.html ?
@@ -92,7 +96,7 @@ prepMashr = function(betas, beta.ses, intermediate) {
 	strong = get_significant_results(m.1by1,0.05)
 
 	#run pca then extreme deconvolution to learn effect patterns from data
-	if (testrun) {
+	if (testrun || testrun2Chroms) {
 		num_components = 2 #not enough tissues to use 5 components in the test run
 	} else {
 		num_components = 5
@@ -111,11 +115,11 @@ prepMashr = function(betas, beta.ses, intermediate) {
 	fittedG = get_fitted_g(mashrModel)
 	saveRDS(fittedG, paste(intermediate, '/fittedG.rds', sep=''))	
 
-	return(list(mashrData, fittedG))
+	return(list(mashrData, fittedG, sample_corr))
 }
 
 runMashr = function(mashrData, fittedG, outdir) {
-	print('----use mashr----')
+	print(paste('----run mashr with outdir ', outdir, '----', sep=''))
 	library(mashr)
 
 	mashrOutput = mash(mashrData, g=fittedG, fixg=TRUE)
@@ -148,6 +152,25 @@ runMashr = function(mashrData, fittedG, outdir) {
 	dev.off()
 }
 
+runMashrChromByChrom = function(betas, beta.ses, sample_corr, fittedG, outdir) {
+	print('---running mashr chrom by chrom---')
+	chroms = paste("chr", c(1:22, 'X'), sep='')
+	for (chrom in chroms) {
+		rows = grepl(paste(chrom, '_', sep=''), rownames(betas), fixed=TRUE)
+		if (!any(rows)) {
+			#in some tests, not all chromosomes will be present
+			next
+		}
+		chromBetas = betas[rows, ]
+		chromBeta.ses = beta.ses[rows, ]
+		prep = list(Bhat = data.matrix(chromBetas), Shat = data.matrix(chromBeta.ses))
+		chromMashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
+		chromOutdir = paste(outdir, chrom, sep='/')
+		dir.create(chromOutdir, showWarnings = FALSE)
+		runMashr(chromMashrData, fittedG, chromOutdir)
+	}
+}
+
 #Step 1: load data
 l = loadData(indir, intermediate)
 betas = l[[1]]
@@ -159,11 +182,14 @@ beta.ses = l[[2]]
 l = prepMashr(betas, beta.ses, intermediate)
 mashrData = l[[1]]
 fittedG = l[[2]]
+sample_corr = l[[3]]
 #mashrData = readRDS(paste(intermediate, '/mashrData.rds', sep=''))
 #fittedG = readRDS(paste(intermediate, '/fittedG.rds', sep=''))
+#sample_corr = readRDS(paste(intermediate, '/sample_corr.rds', sep=''))
 
 #step 3: run mashr
-runMashr(mashrData, fittedG, outdir)
+#runMashr(mashrData, fittedG, outdir)
+runMashrChromByChrom(betas, beta.ses, sample_corr, fittedG, outdir)
 
 #TODO : run without the various optimizations to see what changes
 #Are we using EZ model or EE model? Mentioned in paper
