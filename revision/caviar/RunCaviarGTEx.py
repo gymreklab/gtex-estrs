@@ -58,9 +58,9 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
     str_genotypes = LoadGenotypes(strgt, str_gt_ind, strdata)
     snp_genotypes = LoadGenotypes(snpgt, snp_gt_ind, snpdata)
     all_genotypes = pd.DataFrame(str_genotypes + snp_genotypes)
-    corrmatrix = all_genotypes.transpose().corr()
+    ldmatrix = np.square(all_genotypes.transpose().corr())
     ldfile = os.path.join(tmpdir, gene, "LDFILE")
-    corrmatrix.to_csv(ldfile, header=None, index=False, sep="\t")
+    ldmatrix.to_csv(ldfile, header=None, index=False, sep="\t")
 
 def GetFloat(value):
     if value == "None": return np.nan
