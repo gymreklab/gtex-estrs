@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 # Example
-# ./RunCaviarGTEx.py --linreg_snp /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/SNP_Analysis/Lin_Reg_Out --linreg_str /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/Lin_Reg_Out --samples /storage/mgymrek/gtex-estrs/revision/caviar/samples/Nerve-Tibial.samples --strgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test --genes ENSG00000160213.5 --tmpdir test/
-
-# Notes:
-# Make STR and SNP genotypes indexed, maybe all in one file to keep sample order same?
+# ./RunCaviarGTEx.py --linreg_snp /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/SNP_Analysis/Lin_Reg_Out --linreg_str /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/Lin_Reg_Out --samples /storage/mgymrek/gtex-estrs/revision/caviar/samples/Nerve-Tibial.samples --strgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test.tab --genes ENSG00000160213.5 --tmpdir test/ --num-causal 2 --use-topn-snps 10
 
 import argparse
 import gzip
@@ -108,8 +105,11 @@ def RunCAVIAR(gene, tmpdir, numcausal):
     return True
 
 # Write output. Include info on failed genes
-def WriteOutput(gene, tmp, out):
+def WriteOutput(outfile, gene):
     pass # TODO
+
+def WriteLog(logfile, gene):
+    logfile.write("Failed: %s\n"%gene)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run CAVIAR on GTEx data")
@@ -144,6 +144,10 @@ if __name__ == "__main__":
         # Get sample indices for genotype data
         str_gt_ind, snp_gt_ind, samples = GetGenotypeIndices(args.strgt, args.snpgt, samples)
 
+    # Prepare outputs
+    outfile = open(args.out, "w")
+    logfile = open(args.out+".log", "w")
+
     # For each gene:
     # 1. Get intermediate files
     # 2. Run CAVIAR
@@ -155,5 +159,9 @@ if __name__ == "__main__":
                                  args.use_topn_strs, args.use_topn_snps, \
                                  str_gt_ind, snp_gt_ind, \
                                  args.tmpdir)
-        if not RunCAVIAR(gene, args.tmpdir, args.num_causal): continue
-        WriteOutput(gene, args.tmpdir, args.out)
+        if not RunCAVIAR(gene, args.tmpdir, args.num_causal):
+            WriteLog(logfile, gene)
+            continue
+        WriteOutput(outfile, gene)
+    outfile.close()
+    logfile.close()
