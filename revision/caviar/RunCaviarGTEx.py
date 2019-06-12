@@ -8,9 +8,11 @@
 
 import argparse
 import gzip
+import numpy as np
 import os
 import pandas as pd
 import sys
+import tabix
 
 def PROGRESS(msg, printit=True):
     if printit: # false for some messages when not in debug mode
@@ -46,23 +48,41 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
                         str_gt_ind, snp_gt_ind, \
                         tmpdir):
     if not os.path.exists(os.path.join(tmpdir, gene)): os.mkdir(os.path.join(tmpdir, gene))
-    strdata = strreg[strreg["gene"]==gene].sort_values("p.wald").head(use_topn_strs)
-    snpdata = snpreg[snpreg["gene"]==gene].sort_values("p.wald").head(use_topn_snps)
+    strdata = strreg[strreg["gene"]==gene].sort_values("p.wald").head(use_topn_strs).sort_values("str.start")
+    snpdata = snpreg[snpreg["gene"]==gene].sort_values("p.wald").head(use_topn_snps).sort_values("str.start")
     # 1. Get ZFILE
-    zfile = (os.path.join(tmpdir, gene, "ZFILE"))
+    zfile = os.path.join(tmpdir, gene, "ZFILE")
     strdata[["ID", "Z"]].to_csv(open(zfile, "w"), header=None, index=False, sep="\t")
     snpdata[["ID", "Z"]].to_csv(open(zfile, "a"), header=None, index=False, sep="\t")
     # 2. Get LDFILE for only that set of variants
     str_genotypes = LoadGenotypes(strgt, str_gt_ind, strdata)
     snp_genotypes = LoadGenotypes(snpgt, snp_gt_ind, snpdata)
-    # TODO: concatenate these
-    # TODO: pairwise correlation (is there a function for this?)
-    # TODO: Write to a file
-    pass # TODO
+    all_genotypes = pd.DataFrame(str_genotypes + snp_genotypes)
+    corrmatrix = all_genotypes.transpose().corr()
+    ldfile = os.path.join(tmpdir, gene, "LDFILE")
+    corrmatrix.to_csv(ldfile, header=None, index=False, sep="\t")
+
+def GetFloat(value):
+    if value == "None": return np.nan
+    else: return float(value)
 
 def LoadGenotypes(gtfile, gtind, regdata):
-    # TODO open file with tabix, get only variants in regdata in exact same order
-    return [] # TODO return 2d array of row=variant, column=gt for all samples in gtind. Note gtind-2 is index in file
+    chrom = regdata["chrom"].values[0]
+    start = min(regdata["str.start"])
+    end = max(regdata["str.start"])
+    positions = list(regdata["str.start"])
+    loaded_positions = []
+    tb = tabix.open(gtfile)
+    records = tb.query(chrom, start-1, end+1)
+    data = []
+    for record in records:
+        pos = int(record[1])
+        if pos not in positions: continue
+        loaded_positions.append(pos)
+        data.append([GetFloat(record[i+2]) for i in gtind]) # first two cols are chrom, start
+    assert(len(positions)==len(loaded_positions))
+    assert([positions[i]==loaded_positions[i] for i in range(len(positions))])
+    return data
 
 def GetGenotypeIndices(strgtfile, snpgtfile, samples):
     str_samples = [item.decode('UTF-8') for item in (gzip.open(strgtfile, "r").readline().strip().split()[2:])]
