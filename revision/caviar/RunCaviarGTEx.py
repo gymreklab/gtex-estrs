@@ -96,6 +96,8 @@ def RunCAVIAR(gene, tmpdir, numcausal):
     zfile = os.path.join(tmpdir, gene, "ZFILE")
     ldfile = os.path.join(tmpdir, gene, "LDFILE")
     outfile = os.path.join(tmpdir, gene, "CAVIAR")
+    if os.path.exists(outfile+"_post"): os.remove(outfile+"_post")
+    if os.path.exists(outfile+"_set"): os.remove(outfile+"_set")
     cmd = "CAVIAR -o %s -l %s -z %s -c %s"%(outfile, ldfile, zfile, numcausal)
     p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
     output = p.communicate()[0]
@@ -104,10 +106,22 @@ def RunCAVIAR(gene, tmpdir, numcausal):
         return False
     return True
 
-# Write output. Include info on failed genes
-def WriteOutput(outfile, gene):
-    pass # TODO
+# Write output
+# ["gene", "top_snp", "top_snp_score", "top_str", "top.str.score", "str.rank", "num.snps"]
+def WriteOutput(outfile, gene, tmpdir):
+    cav = pd.read_csv(os.path.join(tmpdir, gene, "CAVIAR_post"), sep="\t", names=["variant", "x","posterior"])
+    cav = cav.sort_values("posterior", ascending=False)
+    cav["rank"] = [item+1 for item in range(cav.shape[0])]
+    cav_snp = cav[cav["variant"].apply(lambda x: "SNP" in x)].sort_values("posterior", ascending=False)
+    cav_str = cav[cav["variant"].apply(lambda x: "SNP" not in x)].sort_values("posterior", ascending=False)
+    str_rank = cav_str["rank"].values[0]
+    output = [gene, cav_snp["variant"].values[0], cav_snp["posterior"].values[0], \
+              cav_str["variant"].values[0], cav_str["posterior"].values[0], str_rank, \
+              cav_snp.shape[0]]
+    output = [str(item) for item in output]
+    outfile.write("\t".join(output)+"\n")
 
+# Write log of failed genes
 def WriteLog(logfile, gene):
     logfile.write("Failed: %s\n"%gene)
 
@@ -146,6 +160,7 @@ if __name__ == "__main__":
 
     # Prepare outputs
     outfile = open(args.out, "w")
+    outfile.write("\t".join(["gene", "top_snp", "top_snp_score", "top_str", "top.str.score", "str.rank","num.snps"])+"\n")
     logfile = open(args.out+".log", "w")
 
     # For each gene:
@@ -162,6 +177,6 @@ if __name__ == "__main__":
         if not RunCAVIAR(gene, args.tmpdir, args.num_causal):
             WriteLog(logfile, gene)
             continue
-        WriteOutput(outfile, gene)
+        WriteOutput(outfile, gene, args.tmpdir)
     outfile.close()
     logfile.close()
