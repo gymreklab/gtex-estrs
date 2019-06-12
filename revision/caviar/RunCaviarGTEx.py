@@ -11,6 +11,7 @@ import gzip
 import numpy as np
 import os
 import pandas as pd
+from subprocess import Popen, PIPE, DEVNULL
 import sys
 import tabix
 
@@ -94,8 +95,17 @@ def GetGenotypeIndices(strgtfile, snpgtfile, samples):
 
 # Run CAVIAR using LDFILE and ZFILE in tmp/
 # Write output to tmp/
-def RunCAVIAR(gene, tmp):
-    pass # TODO
+def RunCAVIAR(gene, tmpdir, numcausal):
+    zfile = os.path.join(tmpdir, gene, "ZFILE")
+    ldfile = os.path.join(tmpdir, gene, "LDFILE")
+    outfile = os.path.join(tmpdir, gene, "CAVIAR")
+    cmd = "CAVIAR -o %s -l %s -z %s -c %s"%(outfile, ldfile, zfile, numcausal)
+    p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
+    output = p.communicate()[0]
+    if p.returncode != 0:
+        PROGRESS("CAVIAR on %s failed"%gene)
+        return False
+    return True
 
 # Write output. Include info on failed genes
 def WriteOutput(gene, tmp, out):
@@ -113,6 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--precomputed", help="Use precomputed input files for CAVIAR", action="store_true")
     parser.add_argument("--use-topn-strs", help="Use top n STRs (by p-value)", type=int, default=1)
     parser.add_argument("--use-topn-snps", help="Use top n SNPs (by p-value)", type=int, default=1000000)
+    parser.add_argument("--num-causal", help="Number of causal variants to consider", type=int, default=3)
     parser.add_argument("--tmpdir", help="Use this directory for temporary files", type=str, default="/tmp")
     args = parser.parse_args()
 
@@ -144,5 +155,5 @@ if __name__ == "__main__":
                                  args.use_topn_strs, args.use_topn_snps, \
                                  str_gt_ind, snp_gt_ind, \
                                  args.tmpdir)
-        RunCAVIAR(gene, args.tmpdir)
+        if not RunCAVIAR(gene, args.tmpdir, args.num_causal): continue
         WriteOutput(gene, args.tmpdir, args.out)
