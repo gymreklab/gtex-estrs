@@ -38,3 +38,33 @@ docker run -it \
 ```
 
 ##### Set up AWS Batch environment #####
+
+```
+aws batch create-compute-environment \
+    --compute-environment-name small \
+    --type MANAGED \
+    --state ENABLED \
+    --compute-resources file://batch-small.json \
+    --service-role arn:aws:iam::369425333806:role/service-role/AWSBatchServiceRole
+
+aws batch create-job-queue \
+    --job-queue-name gtex-small \
+    --state ENABLED \
+    --priority 100 \
+    --compute-environment-order order=1,computeEnvironment=small
+
+aws batch register-job-definition \
+    --job-definition-name gtex-snpreg-job \
+    --type container \
+    --container-properties file://gtex-snpreg-job.json
+```
+
+##### Run AWS test job #####
+
+```
+aws batch submit-job \
+    --job-name NerveTibial-21 \
+    --job-queue gtex-small \
+    --job-definition gtex-snpreg-job:1 \
+    --container-overrides 'command=["Nerve-Tibial","21"]'
+```
