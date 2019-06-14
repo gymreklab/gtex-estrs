@@ -24,4 +24,17 @@ done
 
 ##### Make Dockerfile to run regression analysis (1 job/chrom) #####
 
+```
+docker build -t gymreklab/gtex-estrs-snpreg .
+```
+
+# Test
+```
+docker run -it \
+       --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+       --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+       gymreklab/gtex-estrs-snpreg \
+       WholeBlood 21
+```
+
 ##### Set up AWS Batch environment #####

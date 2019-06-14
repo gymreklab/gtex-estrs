@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CHROM=$1
-TISSUE=$2
+TISSUE=$1
+CHROM=$2
 
 # Get all the files we need from S3
 aws s3 cp s3://gtex-estr/snp_gts_chr${CHROM}.tab /scratch/snp_gts_chr${CHROM}.tab
@@ -18,3 +18,6 @@ aws s3 cp s3://gtex-estr/Corr_Expr_${TISSUE}.csv /scratch/Corr_Expr_${TISSUE}.cs
     --norm \
     --out Lin_Reg_Out_SNPs_${TISSUE}_${CHROM}.tab \
     --tmpdir /tmp
+
+# Upload results
+aws s3 cp Lin_Reg_Out_SNPs_${TISSUE}_${CHROM}.tab s3://gtex-estr/RegressionResults/Lin_Reg_Out_SNPs_${TISSUE}_${CHROM}.tab

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import math
@@ -34,7 +34,7 @@ def ZNorm(vals):
     return [(item-m)/sd for item in vals]
 
 def GetOutlierLimit(X):  
-    # Remove outlier beyond 2xSDs
+    # Remove outlier beyond 2xSD
     M = np.mean(X)
     sd= math.sqrt(np.var(X))
     return M+(5*sd), M-(5*sd)
@@ -166,7 +166,7 @@ if __name__ == "__main__":
             
             
             #removing samples with outlier genotypes (> mean+/-5*sd)
-            O1,O2 = GetOutlierLimit(map(float,locus_str.iloc[:,0].values))
+            O1,O2 = GetOutlierLimit([float(item) for item in locus_str.iloc[:,0].values]) 
             samples_to_keep1 = [samples_to_keep[k] for k in range(len(samples_to_keep)) if float(locus_str.iloc[:,0].values[k])<O1 and float(locus_str.iloc[:,0].values[k])>O2]
             locus_str = locus_str.loc[samples_to_keep1,:]
             locus_y = y.loc[samples_to_keep1,:]
@@ -178,7 +178,7 @@ if __name__ == "__main__":
             #PROGRESS('After clean up... %s'%str(locus_y.shape))
           
             # Run regression
-            beta, beta_se, p = LinearRegression(map(float,locus_str.iloc[:,0].values), locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)
+            beta, beta_se, p = LinearRegression([float(item) for item in locus_str.iloc[:,0].values], locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)
 #
             # Write output
             if beta is not None:
