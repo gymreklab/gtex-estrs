@@ -26,6 +26,7 @@ done
 
 ```
 docker build -t gymreklab/gtex-estrs-snpreg .
+docker push gymreklab/gtex-estrs-snpreg
 ```
 
 # Test
@@ -65,6 +66,6 @@ aws batch register-job-definition \
 aws batch submit-job \
     --job-name NerveTibial-21 \
     --job-queue gtex-small \
-    --job-definition gtex-snpreg-job:1 \
+    --job-definition gtex-snpreg-job:3 \
     --container-overrides 'command=["Nerve-Tibial","21"]'
 ```

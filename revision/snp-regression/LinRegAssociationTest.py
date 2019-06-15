@@ -29,7 +29,6 @@ def PROGRESS(msg):
 def ZNorm(vals):
     m = np.mean(vals)
     sd = math.sqrt(np.var(vals))
-#    print m, '  ', sd
     if sd == 0: return None
     return [(item-m)/sd for item in vals]
 
@@ -43,8 +42,6 @@ def LinearRegression(X, Y, norm=False, minsamples=0):
     """
     Perform linear regression, return beta, beta_se, p
     """
-#    print 'This is X \t', X, type(X)
-#    print 'And this Y\t', Y, type(Y)
     if norm:
         X = ZNorm(X)
         Y = ZNorm(Y)
@@ -55,10 +52,8 @@ def LinearRegression(X, Y, norm=False, minsamples=0):
     mod_ols = sm.OLS(Y, X, missing='drop')
     res_ols = mod_ols.fit()
     pval = res_ols.pvalues[1]
-    #print 'P-value: ', pval 
     slope = res_ols.params[1]
     err = res_ols.bse[1]
-#    print 'slope: ', slope, ' Err: ', err
     return slope, err, pval
 
 if __name__ == "__main__":
@@ -106,7 +101,6 @@ if __name__ == "__main__":
     if "Unnamed: 0" in expr.columns:
         expr.index = expr["Unnamed: 0"].values
         expr = expr.drop("Unnamed: 0", 1)
-#    print expr
 
     # Load expression annotation
     PROGRESS("Load annotation")
@@ -147,7 +141,6 @@ if __name__ == "__main__":
             expr[gene] = random.sample(list(expr[gene].values), expr.shape[0])
         y = pd.DataFrame({"expr":list(expr.loc[:, gene])})
         y.index = str_samples
-#	print cis_strs
 
         for j in range(cis_strs.shape[0]):
             
@@ -173,7 +166,7 @@ if __name__ == "__main__":
             
             #ignore locus if number of #genotype <3
             if len(set(locus_str.iloc[:,0].values)) < MINGENOTYPE: 
-                print(str(locus_str.columns[0])+ ' skipped ................'+str(len(set(locus_str.iloc[:,0].values)))+' genotypes only')
+                #print(str(locus_str.columns[0])+ ' skipped ................'+str(len(set(locus_str.iloc[:,0].values)))+' genotypes only')
                 continue
             #PROGRESS('After clean up... %s'%str(locus_y.shape))
           
