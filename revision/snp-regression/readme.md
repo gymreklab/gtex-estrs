@@ -60,12 +60,17 @@ aws batch register-job-definition \
     --container-properties file://gtex-snpreg-job.json
 ```
 
-##### Run AWS test job #####
+##### Run AWS jobs #####
 
 ```
-aws batch submit-job \
-    --job-name NerveTibial-21 \
+tissue="Nerve-Tibial"
+for chrom in $(seq 1 22)
+do
+cmd="aws batch submit-job \
+    --job-name NerveTibial-${chrom} \
     --job-queue gtex-small \
     --job-definition gtex-snpreg-job:3 \
-    --container-overrides 'command=["Nerve-Tibial","21"]'
+    --container-overrides 'command=[\"${tissue}\",\"${chrom}\"]'"
+sh -c "${cmd}"
+done 
 ```
