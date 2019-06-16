@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-testrun=FALSE
+testrun=TRUE
 testrun2Chroms=FALSE
 if (testrun) {
 	workdir = 'testrun'
@@ -22,7 +22,7 @@ loadData = function(indir, intermediate) {
 
 	#load files individually
 	#lung.table <- read.table("Lung.table", header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
-	dataFrameList = purrr::map(files, read.table, header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
+	dataFrameList = purrr::map(files, read.table, header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric', 'numeric'))
 
 	#some rows are duplicated for some reason, so remove them
 	dataFrameList = purrr::map(dataFrameList, function(x) x[!duplicated(x), ])
@@ -37,17 +37,20 @@ loadData = function(indir, intermediate) {
 
 	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta'))
 	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta.se'))
+	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('significant'))
 
 	#merge the dataframes
 	#In the full run, this will be sized: 226562 obs. of  37 variables:
-	allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start')))
+	allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.id')))
+	#old data
+	#allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start')))
 
 	#move gene, str idetnifier info into rownames
 	rownames(allData) = purrr::pmap(allData[c(1,2,3)], paste, sep='_')
 	allData = allData[-(1:3)]
 
 	#separate betas and beta.ses
-	betas = allData[!grepl('beta.se', colnames(allData))]
+	betas = allData[grepl('beta_', colnames(allData))]
 	beta.ses = allData[grepl('beta.se', colnames(allData))]
 
 	colnames(betas) = purrr::map(colnames(betas), substring, 6)
@@ -55,10 +58,20 @@ loadData = function(indir, intermediate) {
 
 	saveRDS(betas, paste(intermediate, '/betas.rds', sep=''))
 	saveRDS(beta.ses, paste(intermediate, '/beta.ses.rds', sep=''))
-	return(list(betas, beta.ses))
+	
+	#figure out which rows contain something already marked a significant
+	significants = allData[grepl('significant', colnames(allData))]
+	isRowSig = function(...) {
+		row = as.logical(list(...))
+		return(any(row))
+	}
+	sigRows = purrr::pmap_lgl(significants, isRowSig)
+	saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep=''))
+
+	return(list(betas, beta.ses, sigRows))
 }
 
-prepMashr = function(betas, beta.ses, intermediate) {
+prepMashr = function(betas, beta.ses, sigRows, intermediate) {
 	print('----prep mashr----')
 	library(mashr)
 	#For overall coding pattern, look at this vignette:
@@ -75,34 +88,26 @@ prepMashr = function(betas, beta.ses, intermediate) {
 	saveRDS(mashrData, paste(intermediate, '/mashrData.rds', sep=''))
 	saveRDS(sample_corr, paste(intermediate, '/sample_corr.rds', sep=''))
 
+	
 	#1.6)
 	#should we be doing this: https://stephenslab.github.io/mashr/articles/intro_mashnobaseline.html ?
 
 	#2)get the covariance matricies between tissue types
 	#for this specific section, look at this vignette
 	#https://stephenslab.github.io/mashr/articles/intro_mash_dd.html
+	#First select the subset of the data we believe to have signal in it
+	#(significant prior to running mashr)
+	#(drawn from the significant column of the source tables)
 
-	#first run ashr to produce a model for the experimental results
-	#on a per tissue basis.
-	#From this, pull out any effect with a result significant in any tissue
-	#This has the effect of increasing the number of tests identified
-	#as significant
-	#e.g. for the test data:
-	#35, 43, 45 sig results in Artery-Aorta, Artery-Tibial, Lung resp. (per original computation)
-	#(cat /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Lung/Master.table | grep -P '(chr21\t)' | awk -F"\t" '{if (NR!=1) {print $26}}' | datamash sum 1)
-	#101, 135, 122 respectively with lfsr < 0.05 after running ashr
-	#(purrr::map(1:3, function(x) sum(m.1by1$result$lfsr[, x] < 0.05)))
-	m.1by1 = mash_1by1(mashrData)
-	strong = get_significant_results(m.1by1,0.05)
-
-	#run pca then extreme deconvolution to learn effect patterns from data
+	mashrDataStrong = mash_set_data(prep$Bhat[sigRows, ], prep$Shat[sigRows, ], V=sample_corr)
+	#run pca then extreme deconvolution to learn effect patterns from the significant data
 	if (testrun || testrun2Chroms) {
 		num_components = 2 #not enough tissues to use 5 components in the test run
 	} else {
 		num_components = 5
 	}
-	pca_cov_matrices = cov_pca(mashrData, num_components, subset=strong)
-	ed_cov_matrices = cov_ed(mashrData, pca_cov_matrices, subset=strong) #?? what does this step do?
+	pca_cov_matrices = cov_pca(mashrDataStrong, num_components)
+	ed_cov_matrices = cov_ed(mashrDataStrong, pca_cov_matrices) #?? what does this step do?
 	canonical_cov_matrices = cov_canonical(mashrData)
 
 	cov_matrices = c(canonical_cov_matrices, ed_cov_matrices)
@@ -175,11 +180,13 @@ runMashrChromByChrom = function(betas, beta.ses, sample_corr, fittedG, outdir) {
 l = loadData(indir, intermediate)
 betas = l[[1]]
 beta.ses = l[[2]]
+sigRows = l[[3]]
 #betas = readRDS(paste(intermediate, '/betas.rds', sep=''))
 #beta.ses = readRDS(paste(intermediate, '/beta.ses.rds', sep=''))
+#sigRows = readRDS(paste(intermediate, '/sigRows.rds', sep=''))
 
 #Step 2: prep mashr
-l = prepMashr(betas, beta.ses, intermediate)
+l = prepMashr(betas, beta.ses, sigRows, intermediate)
 mashrData = l[[1]]
 fittedG = l[[2]]
 sample_corr = l[[3]]
