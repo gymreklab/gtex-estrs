@@ -18,7 +18,8 @@ aws s3 cp /storage/resources/dbase/human/hg19/gencode_gene_annotations_hg19.csv 
 ```
 for chrom in $(seq 1 22)
 do
-	aws s3 cp /storage/szfeupe/Runs/650GTEx_estr/SNP_Analysis/chr${chrom}.tab s3://gtex-estr/snp_gts_chr${chrom}.tab
+	aws s3 cp /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz s3://gtex-estr/snp_gts_chr${chrom}.tab.gz
+	aws s3 cp /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz.tbi s3://gtex-estr/snp_gts_chr${chrom}.tab.gz.tbi
 done
 ```
 
@@ -35,24 +36,24 @@ docker run -it \
        --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
        --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
        gymreklab/gtex-estrs-snpreg \
-       WholeBlood 21
+       Nerve-Tibial 1
 ```
 
 ##### Set up AWS Batch environment #####
 
 ```
 aws batch create-compute-environment \
-    --compute-environment-name c42xlarge \
+    --compute-environment-name small \
     --type MANAGED \
     --state ENABLED \
     --compute-resources file://batch-small.json \
     --service-role arn:aws:iam::369425333806:role/service-role/AWSBatchServiceRole
 
 aws batch create-job-queue \
-    --job-queue-name gtex-c42xlarge \
+    --job-queue-name gtex-small \
     --state ENABLED \
     --priority 100 \
-    --compute-environment-order order=1,computeEnvironment=c42xlarge
+    --compute-environment-order order=1,computeEnvironment=small
 
 aws batch register-job-definition \
     --job-definition-name gtex-snpreg-job \
@@ -68,8 +69,8 @@ for chrom in 1 2 3 4 5 6 7 8 9 10 11 12 13 #$(seq 1 20) # 21 22
 do
 cmd="aws batch submit-job \
     --job-name NerveTibial-${chrom} \
-    --job-queue gtex-c42xlarge \
-    --job-definition gtex-snpreg-job:6 \
+    --job-queue gtex-small \
+    --job-definition gtex-snpreg-job:3 \
     --container-overrides 'command=[\"${tissue}\",\"${chrom}\"]'"
 sh -c "${cmd}"
 done 

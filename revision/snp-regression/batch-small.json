@@ -3,7 +3,7 @@
     "minvCpus": 0,
     "maxvCpus": 256,
     "desiredvCpus": 0,
-    "instanceTypes": ["c4.2xlarge"],
+    "instanceTypes": ["c4.large"],
     "subnets": [
 	"subnet-01d74064"
     ],

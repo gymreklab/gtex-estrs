@@ -34,6 +34,7 @@ def GetCisSTRs(gtfile, chrom, start, end):
     data = []
     for record in records:
         data.append(record)
+    if len(data) == 0: return None
     df = pd.DataFrame(data)
     gtcols = [item.decode('UTF-8') for item in (gzip.open(gtfile, "r").readline().strip().split())]
     df.columns = gtcols
@@ -151,6 +152,7 @@ if __name__ == "__main__":
         start = expr_annot["gene.start"].values[i]
         end = expr_annot["gene.stop"].values[i]
         cis_strs = GetCisSTRs(STRGTFILE, CHROM, start-DISTFROMGENE, end+DISTFROMGENE)
+        if cis_strs is None: continue
         PROGRESS("%s STRs tested \n"%str(cis_strs.shape[0]))
 
         # Preprocess all at once
