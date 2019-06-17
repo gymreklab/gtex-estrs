@@ -42,17 +42,17 @@ docker run -it \
 
 ```
 aws batch create-compute-environment \
-    --compute-environment-name small \
+    --compute-environment-name c42xlarge \
     --type MANAGED \
     --state ENABLED \
     --compute-resources file://batch-small.json \
     --service-role arn:aws:iam::369425333806:role/service-role/AWSBatchServiceRole
 
 aws batch create-job-queue \
-    --job-queue-name gtex-small \
+    --job-queue-name gtex-c42xlarge \
     --state ENABLED \
     --priority 100 \
-    --compute-environment-order order=1,computeEnvironment=small
+    --compute-environment-order order=1,computeEnvironment=c42xlarge
 
 aws batch register-job-definition \
     --job-definition-name gtex-snpreg-job \
@@ -64,12 +64,12 @@ aws batch register-job-definition \
 
 ```
 tissue="Nerve-Tibial"
-for chrom in $(seq 1 22)
+for chrom in 1 2 3 4 5 6 7 8 9 10 11 12 13 #$(seq 1 20) # 21 22
 do
 cmd="aws batch submit-job \
     --job-name NerveTibial-${chrom} \
-    --job-queue gtex-small \
-    --job-definition gtex-snpreg-job:3 \
+    --job-queue gtex-c42xlarge \
+    --job-definition gtex-snpreg-job:6 \
     --container-overrides 'command=[\"${tissue}\",\"${chrom}\"]'"
 sh -c "${cmd}"
 done 
