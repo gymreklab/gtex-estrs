@@ -167,7 +167,7 @@ if __name__ == "__main__":
         y = pd.DataFrame({"expr":list(expr.loc[:, gene])})
         y.index = str_samples
 
-        for j in range(cis_strs.shape[0]):            
+        for j in range(len(str_ids)):            
             # Get STR data
             locus_str = cis_strs.ix[:, str_ids[j]]
 
