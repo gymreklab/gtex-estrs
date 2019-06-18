@@ -51,7 +51,7 @@ WholeBlood
 #'Kidney-Cortex Liver '
 
 
-#escape the tissue types
+#escape the parentheses in the tissue types names
 tissuetypes=$(printf '%q ' $tissuetypes)
 
 if [ "$testrun" = true ]; then

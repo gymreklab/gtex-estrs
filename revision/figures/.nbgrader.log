@@ -1,0 +1,219 @@
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9013/?token=6cbfeab892d736684da30905161f22425781b33d2c1a65b9
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-141040-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9013/?token=6cbfeab892d736684da30905161f22425781b33d2c1a65b9
+[NotebookApp | INFO] interrupted
+[NotebookApp | INFO] 302 GET /?token=6cbfeab892d736684da30905161f22425781b33d2c1a65b9 (::1) 1.07ms
+[NotebookApp | INFO] Creating new notebook in 
+[NotebookApp | INFO] Writing notebook-signing key to /home/jmargoliash/.local/share/jupyter/notebook_secret
+[NotebookApp | INFO] Kernel started: 38a6a197-80e7-425d-95bd-ad0d7597edc5
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 38a6a197-80e7-425d-95bd-ad0d7597edc5
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | WARNING] WebSocket ping timeout after 119949 ms.
+[NotebookApp | INFO] Starting buffering for 38a6a197-80e7-425d-95bd-ad0d7597edc5:282682730f8148b987574c072760bab1
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 38a6a197-80e7-425d-95bd-ad0d7597edc5
+[NotebookApp | INFO] Restoring connection for 38a6a197-80e7-425d-95bd-ad0d7597edc5:282682730f8148b987574c072760bab1
+[NotebookApp | INFO] Starting buffering for 38a6a197-80e7-425d-95bd-ad0d7597edc5:282682730f8148b987574c072760bab1
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 38a6a197-80e7-425d-95bd-ad0d7597edc5
+[NotebookApp | INFO] Restoring connection for 38a6a197-80e7-425d-95bd-ad0d7597edc5:282682730f8148b987574c072760bab1
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] interrupted
+[NotebookApp | CRITICAL] received signal 2, stopping
+[NotebookApp | INFO] Shutting down 1 kernel
+[NotebookApp | INFO] Kernel shutdown: 38a6a197-80e7-425d-95bd-ad0d7597edc5
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9013/?token=6b34a28a3d48bf354a03ff3d25507ce696795a5e12ba5fb8
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-145778-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9013/?token=6b34a28a3d48bf354a03ff3d25507ce696795a5e12ba5fb8
+[NotebookApp | WARNING] Clearing invalid/expired login cookie username-localhost-9013
+[NotebookApp | WARNING] Clearing invalid/expired login cookie username-localhost-9013
+[NotebookApp | INFO] 302 GET /notebooks/MashrFigures.ipynb (::1) 5.47ms
+[NotebookApp | INFO] 302 GET /login?next=%2Fnotebooks%2FMashrFigures.ipynb (::1) 1.20ms
+[NotebookApp | INFO] Kernel started: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] interrupted
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Kernel interrupted: efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | WARNING] WebSocket ping timeout after 119965 ms.
+[NotebookApp | INFO] Starting buffering for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Restoring connection for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] Replacing stale connection: efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] Replacing stale connection: efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] Replacing stale connection: efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] Replacing stale connection: efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] Replacing stale connection: efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Starting buffering for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Restoring connection for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Starting buffering for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel efd698b2-add4-41a1-87a5-142d3f487a46
+[NotebookApp | INFO] Restoring connection for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | INFO] Starting buffering for efd698b2-add4-41a1-87a5-142d3f487a46:536f1a9e40f94ab188d00a4073c5c1a2
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9014/?token=5f05777f05f673b360552f224dc2ad43e432b72ec2d0a727
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-174120-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9014/?token=5f05777f05f673b360552f224dc2ad43e432b72ec2d0a727
+[NotebookApp | INFO] interrupted
+[NotebookApp | CRITICAL] received signal 2, stopping
+[NotebookApp | INFO] Shutting down 0 kernels
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9013/?token=641d1e2f125234545abebc326c06219a2287841a111568f3
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-174525-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9013/?token=641d1e2f125234545abebc326c06219a2287841a111568f3
+[NotebookApp | INFO] Kernel started: 6476a7b6-79d4-46aa-abdc-99416e3ecd40
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 6476a7b6-79d4-46aa-abdc-99416e3ecd40
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | WARNING] WebSocket ping timeout after 119901 ms.
+[NotebookApp | INFO] Starting buffering for 6476a7b6-79d4-46aa-abdc-99416e3ecd40:588af11690754ed7baa0c94157352c7f
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9013/?token=6d8b7ac272350babdd9f17a060949a78d9ef363eb3d4156c
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-180867-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9013/?token=6d8b7ac272350babdd9f17a060949a78d9ef363eb3d4156c
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | INFO] Kernel started: 0bba1e3e-c59b-4415-b40f-58ba5ed09718
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 0bba1e3e-c59b-4415-b40f-58ba5ed09718
+[NotebookApp | INFO] Saving file at /MashrFigures.ipynb
+[NotebookApp | WARNING] WebSocket ping timeout after 119945 ms.
+[NotebookApp | INFO] Starting buffering for 0bba1e3e-c59b-4415-b40f-58ba5ed09718:a462e5d1fce943d885f5add47034290d
+[NotebookApp | WARNING] No nbgrader_config.py file found (rerun with --debug to see where nbgrader is looking)
+[NotebookApp | INFO] Loading the validate_assignment nbgrader serverextension
+[NotebookApp | INFO] Serving notebooks from local directory: /storage/jmargoliash/gtex-estrs/revision/figures
+[NotebookApp | INFO] The Jupyter Notebook is running at:
+[NotebookApp | INFO] http://localhost:9013/?token=1069b0671bf69357ba99c1cff4fba764fde9e05e638478ab
+[NotebookApp | INFO] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[NotebookApp | CRITICAL] 
+    
+    To access the notebook, open this file in a browser:
+        file:///run/user/1037/jupyter/nbserver-181898-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:9013/?token=1069b0671bf69357ba99c1cff4fba764fde9e05e638478ab
+[NotebookApp | INFO] Kernel started: 01ad04a0-e605-42de-a9c4-83eacd0cac7f
+[NotebookApp | INFO] Adapting to protocol v5.1 for kernel 01ad04a0-e605-42de-a9c4-83eacd0cac7f

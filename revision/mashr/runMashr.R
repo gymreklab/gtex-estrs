@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-testrun=TRUE
+testrun=FALSE
 testrun2Chroms=FALSE
 if (testrun) {
 	workdir = 'testrun'
@@ -22,7 +22,7 @@ loadData = function(indir, intermediate) {
 
 	#load files individually
 	#lung.table <- read.table("Lung.table", header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
-	dataFrameList = purrr::map(files, read.table, header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric', 'numeric'))
+	dataFrameList = purrr::map(files, read.table, header=TRUE, sep="\t", colClasses=c('character', 'factor', 'character', 'numeric', 'numeric', 'numeric'))
 
 	#some rows are duplicated for some reason, so remove them
 	dataFrameList = purrr::map(dataFrameList, function(x) x[!duplicated(x), ])
@@ -62,8 +62,9 @@ loadData = function(indir, intermediate) {
 	#figure out which rows contain something already marked a significant
 	significants = allData[grepl('significant', colnames(allData))]
 	isRowSig = function(...) {
-		row = as.logical(list(...))
-		return(any(row))
+		row = list(...)
+		row[is.na(row)] = 0
+		return(any(as.logical(row)))
 	}
 	sigRows = purrr::pmap_lgl(significants, isRowSig)
 	saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep=''))
@@ -147,20 +148,27 @@ runMashr = function(mashrData, fittedG, outdir) {
 	library(corrplot)
 	sharing = get_pairwise_sharing(mashrOutput, factor = 0.5)
 	png(paste(outdir, '/significantEffectSharing.png', sep=''))
-	corrplot(sharing, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0))
+	corrplot(sharing, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0), number.cex=.5, tl.cex=.8, order='hclust')
 	dev.off()
 
 	sig = get_significant_results(mashrOutput)
 	secorr = cor(get_pm(mashrOutput)[sig, ])
 	png(paste(outdir, '/significantEffectCorr.png', sep=''))
-	corrplot(secorr, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Sharing by Magnitude', mar = c(4,0,4,0))
+	corrplot(secorr, method='color', cl.lim=c(0,1), type='upper', addCoef.col = "black", tl.col="black", tl.srt=45, title = 'Pairwise Correlation', mar = c(4,0,4,0), number.cex=.5, tl.cex=.8, order='hclust')
 	dev.off()
 }
 
 runMashrChromByChrom = function(betas, beta.ses, sample_corr, fittedG, outdir) {
 	print('---running mashr chrom by chrom---')
+	#paralellize this process
+	library(foreach)
+	library(doMC)
+	library(mashr)
+	registerDoMC(23) #number of cores allotted
+
 	chroms = paste("chr", c(1:22, 'X'), sep='')
-	for (chrom in chroms) {
+	foreach (idx = 1:length(chroms)) %dopar% {
+		chrom = chroms[idx]
 		rows = grepl(paste(chrom, '_', sep=''), rownames(betas), fixed=TRUE)
 		if (!any(rows)) {
 			#in some tests, not all chromosomes will be present
@@ -173,6 +181,28 @@ runMashrChromByChrom = function(betas, beta.ses, sample_corr, fittedG, outdir) {
 		chromOutdir = paste(outdir, chrom, sep='/')
 		dir.create(chromOutdir, showWarnings = FALSE)
 		runMashr(chromMashrData, fittedG, chromOutdir)
+	}
+}
+
+collateChromResults = function(outdir) {
+	library(purrr)
+	library(dplyr)
+	library(tibble)
+	chroms = paste("chr", 1:22, sep='')
+	myReadCSV = function(file) { return(read.csv(file, sep="\t", header=TRUE, row.names = 1))}
+
+	dfList = purrr::map(chroms, function(chrom) {
+		posterior_lfsr = myReadCSV(paste(outdir, '/', chrom, '/posterior_lfsr.tsv', sep=''))
+		posterior_betas = myReadCSV(paste(outdir, '/', chrom, '/posterior_betas.tsv', sep=''))
+		posterior_beta_ses = myReadCSV(paste(outdir, '/', chrom, '/posterior_beta_ses.tsv', sep=''))
+		posterior_log10bf = myReadCSV(paste(outdir, '/', chrom, '/posterior_log10bf.tsv', sep=''))
+		return(list(posterior_lfsr, posterior_betas, posterior_beta_ses, posterior_log10bf))
+	})
+
+	varNames = c('posterior_lfsr', 'posterior_betas', 'posterior_beta_ses', 'posterior_log10bf')
+	for (i in 1:4) {
+		df = column_to_rownames(dplyr::bind_rows(purrr::map(dfList, ~ rownames_to_column(.x[[i]]))))
+   	    write.table(df, paste(outdir, '/', varNames[i], '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	}
 }
 
@@ -197,6 +227,7 @@ sample_corr = l[[3]]
 #step 3: run mashr
 #runMashr(mashrData, fittedG, outdir)
 runMashrChromByChrom(betas, beta.ses, sample_corr, fittedG, outdir)
+collateChromResults(outdir)
 
 #TODO : run without the various optimizations to see what changes
 #Are we using EZ model or EE model? Mentioned in paper
