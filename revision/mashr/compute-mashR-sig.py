@@ -30,9 +30,8 @@ zmax = pd.merge(zmax, genemax, on=["gene"])
 sig = zmax[zmax.apply(lambda x: x["zmax"]==x["genemax"] and x["genemax"]>=ZTHRESH, 1)]
 sig[["ID","zmax"]].to_csv(os.path.join(workdir, "output-%s"%prefix, "sig.tsv"), sep="\t", index=False)
 
-zsigind = [item for item in zvals.index if item in sig["ID"]]
-zsig = zvals[zsigind]
-zsig.to_csv(os.path.join(workdir, "output-%s"%prefix, "zscores-sigonly.tsv"), sep="\t", index=False)
+zsig = zvals.loc[sig["ID"]]
+zsig.to_csv(os.path.join(workdir, "output-%s"%prefix, "zscores-sigonly.tsv"), sep="\t", index=True)
 
 # Summarize
 print("Sig genes: %s"%sig.shape[0])

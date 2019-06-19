@@ -3,11 +3,13 @@
 # Prepare input data
 ./gatherData.sh
 
-# Run on STRs
+# Run
 nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
+nohup R CMD BATCH '--args runval="snps"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-snps/mashr.snps.log &
 
-# Run on SNPs
-# TODO SNPs
+# Collate by chrom
+./collate-chroms.sh /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./collate-chroms.sh /storage/mgymrek/gtex-estrs/revision/mashr/ snps
 
 # Compute Z-scores
 ./compute-mashR-Z.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
@@ -15,7 +17,7 @@ nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/
 
 # Compute significant eSTRs/eSNPs
 ./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
-./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ snps
 
 ### Notes on inputs/outputs ###
 Examining output and other files:
