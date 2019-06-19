@@ -1,8 +1,5 @@
 #!/bin/bash
 
-testrun=false
-testrun2Chroms=false
-
 #example where I learned this from
 # ls -ld /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/* | grep '^d' | sed -e 's/\s\+/ /g' | cut -f 9 -d ' '
 
@@ -30,20 +27,7 @@ WholeBlood
 #escape the parentheses in the tissue types names
 tissuetypes=$(printf '%q ' $tissuetypes)
 
-if [ "$testrun" = true ]; then
-	#only use three tissues - two similar, one not, in testing
-	testtissues='Artery-Aorta Artery-Tibial Lung'
-	tissuetypes=$testtissues
-	workdir='testrun'
-elif [ "$testrun2Chroms" = true ]; then
-	#only use three tissues - two similar, one not, in testing
-	testtissues='Artery-Aorta Artery-Tibial Lung'
-	tissuetypes=$testtissues
-	workdir='testrun2Chroms'
-else
-	workdir='/storage/mgymrek/gtex-estrs/revision/mashr/'
-fi
-
+workdir='/storage/mgymrek/gtex-estrs/revision/mashr/'
 mkdir -p ${workdir}/output-strs
 mkdir -p ${workdir}/input-strs
 mkdir -p ${workdir}/intermediate-strs

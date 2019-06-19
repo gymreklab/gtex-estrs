@@ -1,9 +1,10 @@
 How to run:
 
 ./gatherData.sh
-nohup R CMD BATCH runMashr.R terminalOutputFile.txt &
-#to follow along with what's happening
-tail -f terminalOutputFile.txt 
+nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
+# To follow: tail -f /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log
+
+# TODO SNPs
 
 Examining output and other files:
 outputDirectory/output - contains tsvs of the four posterior calculations
