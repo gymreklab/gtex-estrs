@@ -59,9 +59,6 @@ loadData = function(indir, intermediate) {
                             
     colnames(betas) = purrr::map(colnames(betas), substring, 6)
     colnames(beta.ses) = purrr::map(colnames(beta.ses), substring, 9)
-
-    saveRDS(betas, paste(intermediate, '/betas.rds', sep=''))
-    saveRDS(beta.ses, paste(intermediate, '/beta.ses.rds', sep=''))
     
     #figure out which rows contain something significant
     sig_pval_thresh = 1e-5
@@ -83,11 +80,15 @@ loadData = function(indir, intermediate) {
         naRows = naRows | is.na(betas[colname])
     }
     sigRows = sigRows & (!naRows) # NA rows cannot be in sigRows                       
-    saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep='')) # save for reuse
 
     # Set NAs to 0s but big stderr
     betas[is.na(betas)] = 0
     beta.ses[is.na(beta.ses)] = 10
+
+    saveRDS(betas, paste(intermediate, '/betas.rds', sep=''))
+    saveRDS(beta.ses, paste(intermediate, '/beta.ses.rds', sep=''))
+    saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep='')) # save for reuse
+    saveRDS(naRows, paste(intermediate, '/naRows.rds', sep='')) # save for reuse
 
     # Return output
     return(list(betas, beta.ses, sigRows, naRows))
@@ -102,13 +103,15 @@ prepMashr = function(betas, beta.ses, sigRows, naRows, intermediate) {
     #1)hand the data off to mashr
     prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
     mashrData = mash_set_data(prep$Bhat[!naRows,], prep$Shat[!naRows,])
+    sample_corr = estimate_null_correlation_simple(mashrData)
+    mashrData = mash_update_data(mashrData, V=sample_corr)
+
+    # Prepare other mashR matrices
     mashrDataStrong = mash_set_data(prep$Bhat[sigRows, ], prep$Shat[sigRows, ], V=sample_corr)
     mashrDataAll = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
 
     #1.5)
     #account for correlation among samples
-    sample_corr = estimate_null_correlation_simple(mashrData)
-    mashrData = mash_update_data(mashrData, V=sample_corr)
     saveRDS(mashrData, paste(intermediate, '/mashrData.rds', sep=''))
     saveRDS(sample_corr, paste(intermediate, '/sample_corr.rds', sep=''))
 
@@ -199,11 +202,15 @@ collateChromResults = function(outdir) {
 }
 
 # Step 1: load data
-l = loadData(indir, intermediate)
-betas = l[[1]]
-beta.ses = l[[2]]
-sigRows = l[[3]]
-naRows = l[[4]]
+#l = loadData(indir, intermediate)
+#betas = l[[1]]
+#beta.ses = l[[2]]
+#sigRows = l[[3]]
+#naRows = l[[4]]
+betas = readRDS(paste(intermediate, '/betas.rds', sep=''))
+beta.ses = readRDS(paste(intermediate, '/beta.ses.rds', sep=''))
+sigRows = readRDS(paste(intermediate, '/sigRows.rds', sep=''))
+naRows = readRDS(paste(intermediate, '/naRows.rds', sep=''))
 
 # Step 2: Prep mashR
 l = prepMashr(betas, beta.ses, sigRows, naRows, intermediate)

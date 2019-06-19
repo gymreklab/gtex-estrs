@@ -1,13 +1,23 @@
-How to run:
+### How to run ###
 
+# Prepare input data
+./gatherData.sh
+
+# Run on STRs
+nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
+
+# Run on SNPs
 # TODO SNPs
 
-./gatherData.sh
-nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
-# To follow: tail -f /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log
+# Compute Z-scores
+./compute-mashR-Z.sh /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-Z.sh /storage/mgymrek/gtex-estrs/revision/mashr/ snps
+# TODO
 
+# Compute significant eSTRs/eSNPs
+# TODO
 
-
+### Notes on inputs/outputs ###
 Examining output and other files:
 outputDirectory/output - contains tsvs of the four posterior calculations
 	(betas, beta_ses, lfsr and log10 of the bayes factors),
