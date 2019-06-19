@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 library('purrr')
-library('purrr')
 library(mashr)
 library(foreach)
 library(doMC)
