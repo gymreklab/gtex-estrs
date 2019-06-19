@@ -48,7 +48,6 @@ loadData = function(indir, intermediate) {
 
     #merge the dataframes
     allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start'), all=TRUE))
-    #allData[is.na(allData)] = 0
 
     #move gene, str idetnifier info into rownames
     rownames(allData) = purrr::pmap(allData[c(1,2,3)], paste, sep='_')
@@ -205,7 +204,6 @@ betas = l[[1]]
 beta.ses = l[[2]]
 sigRows = l[[3]]
 naRows = l[[4]]
-print(naRows)
 
 # Step 2: Prep mashR
 l = prepMashr(betas, beta.ses, sigRows, naRows, intermediate)
