@@ -2,3 +2,9 @@ temp
 .nbgrader.log
 *.swp
 fullrun
+fullrunOutput.txt
+testrun2Chroms
+nohup.out
+fullrun*
+.RData
+firstSuccessfulFullRun
