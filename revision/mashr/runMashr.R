@@ -9,6 +9,7 @@ if (testrun) {
 } else {
 	workdir = 'fullrun'
 }
+workdir = 'fullrunsnp'
 indir = paste(workdir, '/input', sep='')
 outdir = paste(workdir, '/output', sep='')
 intermediate = paste(workdir, '/intermediate', sep='')
@@ -22,7 +23,7 @@ loadData = function(indir, intermediate) {
 
 	#load files individually
 	#lung.table <- read.table("Lung.table", header=TRUE, colClasses=c('character', 'factor', 'integer', 'numeric', 'numeric'))
-	dataFrameList = purrr::map(files, read.table, header=TRUE, sep="\t", colClasses=c('character', 'factor', 'character', 'numeric', 'numeric', 'numeric'))
+	dataFrameList = purrr::map(files, read.table, header=TRUE, sep="\t", colClasses=c('character', 'factor', 'character', 'numeric', 'numeric'))
 
 	#some rows are duplicated for some reason, so remove them
 	dataFrameList = purrr::map(dataFrameList, function(x) x[!duplicated(x), ])
@@ -37,11 +38,14 @@ loadData = function(indir, intermediate) {
 
 	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta'))
 	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('beta.se'))
-	dataFrameList = purrr::map2(dataFrameList, shortFileNames, append('significant'))
 
 	#merge the dataframes
-	#In the full run, this will be sized: 226562 obs. of  37 variables:
-	allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.id')))
+	#comment out all=TRUE to only use STRs that have results in all tissues
+	allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.id')))#, all=TRUE))
+	#comment out this line to keep NAs instead of zeros for STRs with results in only some tissues
+	#set.seed(13)
+	#allData[is.na(allData)] = runif(sum(is.na(allData)), 0, 1e-7) #using actual zero here causes singularity issues in extreme deconvolution below
+
 	#old data
 	#allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.start')))
 
@@ -59,14 +63,20 @@ loadData = function(indir, intermediate) {
 	saveRDS(betas, paste(intermediate, '/betas.rds', sep=''))
 	saveRDS(beta.ses, paste(intermediate, '/beta.ses.rds', sep=''))
 	
-	#figure out which rows contain something already marked a significant
-	significants = allData[grepl('significant', colnames(allData))]
-	isRowSig = function(...) {
-		row = list(...)
-		row[is.na(row)] = 0
-		return(any(as.logical(row)))
+	#figure out which rows contain something significant
+	sig_pval_thresh = 1e-4
+	
+	#get a vector with the same row names, but all falses
+	sigRows = betas["Lung"] 
+	colnames(sigRows) = "Significant"
+	sigRows[TRUE] = FALSE
+	for (colname in colnames(betas)) {
+		zscores = abs(betas[colname]/beta.ses[colname])[,1]
+		zscores[betas[colname] == 0] = 0
+		oneSidedReversePVals = pnorm(zscores)
+		twoSidedPVals = 2*(1 - oneSidedReversePVals)
+		sigRows = sigRows | (twoSidedPVals < sig_pval_thresh)
 	}
-	sigRows = purrr::pmap_lgl(significants, isRowSig)
 	saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep=''))
 
 	return(list(betas, beta.ses, sigRows))

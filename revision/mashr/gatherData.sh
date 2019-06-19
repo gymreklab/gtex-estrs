@@ -68,6 +68,7 @@ else
 	workdir='fullrun'
 fi
 
+workdir='fullrunsnps'
 mkdir -p ${workdir}/output
 mkdir -p ${workdir}/input
 mkdir -p ${workdir}/intermediate
@@ -92,9 +93,11 @@ if [ false = true ]; then
 		eval $command
 	done
 else 
-	tissuedir=/storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Review_Rerun
+	tissuedir=/storage/mgymrek/gtex-estrs/revision/snpreg
 	for tissue in $tissuetypes ; do
-		command="cat ${tissuedir}/${tissue}/PQValues"' | awk -F"\t" '"'"'{print $1 "\t" $2 "\t" $3 "\t" $7 "\t" $10 "\t" $11 }'"'"
+		#for strreg command="cat ${tissuedir}/${tissue}_strreg.tab"' | awk -F"\t" '"'"'{print $2 "\t" $3 "\t" $4 "\t" $10 "\t" $11 }'"'"
+		#for snpreg
+		command="cat ${tissuedir}/${tissue}_snpreg.tab"' | awk -F"\t" '"'"'{print $1 "\t" $2 "\t" $3 "\t" $6 "\t" $7 }'"'"
 
 		if [ "$testrun" = true ]; then
 			#only use chromosome 21 in testing
