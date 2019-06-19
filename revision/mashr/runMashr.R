@@ -26,7 +26,7 @@ loadData = function(indir, intermediate) {
     print('----Load the data into two dataframes----')
     
     #get files to load
-    files = list.files(path=indir, pattern="*.table", full.names=TRUE) # TODO comment out A
+    files = list.files(path=indir, pattern="*.table", full.names=TRUE)
     shortFileNames = purrr::map(files, function(name) basename(tools::file_path_sans_ext(name)))
 
     #load files individually
@@ -86,6 +86,11 @@ loadData = function(indir, intermediate) {
     sigRows = sigRows & (!naRows) # NA rows cannot be in sigRows                       
     saveRDS(sigRows, paste(intermediate, '/sigRows.rds', sep='')) # save for reuse
 
+    # Set NAs to 0s but big stderr
+    betas[is.na(betas)] = 0
+    beta.ses[is.na(beta.ses)] = 10
+
+    # Return output
     return(list(betas, beta.ses, sigRows, naRows))
 }
 
@@ -98,6 +103,8 @@ prepMashr = function(betas, beta.ses, sigRows, naRows, intermediate) {
     #1)hand the data off to mashr
     prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
     mashrData = mash_set_data(prep$Bhat[!naRows,], prep$Shat[!naRows,])
+    mashrDataStrong = mash_set_data(prep$Bhat[sigRows, ], prep$Shat[sigRows, ], V=sample_corr)
+    mashrDataAll = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
 
     #1.5)
     #account for correlation among samples
@@ -106,10 +113,12 @@ prepMashr = function(betas, beta.ses, sigRows, naRows, intermediate) {
     saveRDS(mashrData, paste(intermediate, '/mashrData.rds', sep=''))
     saveRDS(sample_corr, paste(intermediate, '/sample_corr.rds', sep=''))
 
-    mashrDataStrong = mash_set_data(prep$Bhat[sigRows, ], prep$Shat[sigRows, ], V=sample_corr)
-
     #run pca then extreme deconvolution to learn effect patterns from the significant data
-    num_components = 2 # TODO change to 5
+    if (runval == "test") {
+      num_components = 2
+    } else {
+      num_components = 5
+    }
     pca_cov_matrices = cov_pca(mashrDataStrong, num_components)
     ed_cov_matrices = cov_ed(mashrDataStrong, pca_cov_matrices) #?? what does this step do?
     canonical_cov_matrices = cov_canonical(mashrData)
@@ -123,7 +132,7 @@ prepMashr = function(betas, beta.ses, sigRows, naRows, intermediate) {
     fittedG = get_fitted_g(mashrModel)
     saveRDS(fittedG, paste(intermediate, '/fittedG.rds', sep=''))	
 
-    return(list(mashrData, fittedG, sample_corr))
+    return(list(mashrDataAll, fittedG, sample_corr))
 }
 
 
@@ -196,6 +205,7 @@ betas = l[[1]]
 beta.ses = l[[2]]
 sigRows = l[[3]]
 naRows = l[[4]]
+print(naRows)
 
 # Step 2: Prep mashR
 l = prepMashr(betas, beta.ses, sigRows, naRows, intermediate)

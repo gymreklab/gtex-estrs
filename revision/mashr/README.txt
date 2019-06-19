@@ -1,10 +1,13 @@
 How to run:
 
+# TODO SNPs
+# TODO: mashR not producing output for the "NA" rows?
+
 ./gatherData.sh
 nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
 # To follow: tail -f /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log
 
-# TODO SNPs
+
 
 Examining output and other files:
 outputDirectory/output - contains tsvs of the four posterior calculations
