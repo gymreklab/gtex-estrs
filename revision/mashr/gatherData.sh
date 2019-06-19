@@ -37,15 +37,21 @@ mkdir -p ${workdir}/intermediate-snps
 
 datadir=/storage/mgymrek/gtex-estrs/revision/
 ### Get STR data ###
-for tissue in $tissuetypes; do
-    echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-strs/$tissue.table
-    cat ${datadir}/strreg/${tissue}_strreg.tab | grep -v chrom | \
-	awk -F"\t" '{print $2 "\t" $3 "\t" $5 "\t" $10 "\t" ($13<10**-4) "\t" $11}' >> ${workdir}/input-strs/$tissue.table
-done
+#for tissue in $tissuetypes; do
+#    echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-strs/$tissue.table
+#    cat ${datadir}/strreg/${tissue}_strreg.tab | grep -v chrom | \
+#	awk -F"\t" '{print $2 "\t" $3 "\t" $5 "\t" $10 "\t" ($13<10**-4) "\t" $11}' >> ${workdir}/input-strs/$tissue.table
+#done
 
 ### Get SNP data ###
+for chrom in $(seq 1 22); do
+    mkdir -p ${workdir}/input-snps-bychrom/chr${chrom}/
+done
+
 for tissue in $tissuetypes; do
-    echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-snps/$tissue.table
-    cat ${datadir}/snpreg/${tissue}_snpreg.tab | grep -v chrom | \
-	awk -F"\t" '{print $1 "\t" $2 "\t" $4 "\t" $6 "\t" ($9<10**-4) "\t" $7}' >> ${workdir}/input-snps/$tissue.table
+    for chrom in $(seq 1 22); do
+	echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-snps/$tissue.table
+	cat ${datadir}/snpreg/${tissue}_snpreg.tab | grep -v chrom | grep -w chr${chrom} | \
+	    awk -F"\t" '{print $1 "\t" $2 "\t" $4 "\t" $6 "\t" ($9<10**-4) "\t" $7}' >> ${workdir}/input-snps-bychrom/chr${chrom}/$tissue.table
+    done
 done

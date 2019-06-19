@@ -8,7 +8,6 @@ library(sqldf)
 
 args = commandArgs(trailingOnly=TRUE)
 
-usechrom="all" # if all, run all, else run only single chrom
 if(length(args)==0){
     print("No arguments supplied.")
     runval = "test"
@@ -24,7 +23,7 @@ indir = paste(workdir, '/input-', runval, sep='')
 outdir = paste(workdir, '/output-', runval, sep='')
 intermediate = paste(workdir, '/intermediate-', runval, sep='')
 
-loadData = function(indir, intermediate, usechrom) {
+loadData = function(indir, intermediate) {
     print('----Load the data into two dataframes----')
     
     #get files to load
@@ -32,11 +31,7 @@ loadData = function(indir, intermediate, usechrom) {
     shortFileNames = purrr::map(files, function(name) basename(tools::file_path_sans_ext(name)))
 
     #load files individually
-    if (usechrom == "all") {
-        dataFrameList = purrr::map(files, read.table, header=TRUE, sep="\t", colClasses=c('character', 'factor', 'character', 'numeric', 'numeric'))
-    } else {
-      dataFrameList = purr:map(files, read.csv.sql, sql=paste("select * from file where `chrom`=",usechrom))
-    }
+    dataFrameList = purrr::map(files, read.table, header=TRUE, sep="\t", colClasses=c('character', 'factor', 'character', 'numeric', 'numeric'))
 
     #some rows are duplicated for some reason, so remove them
     dataFrameList = purrr::map(dataFrameList, function(x) x[!duplicated(x), ])
@@ -208,7 +203,7 @@ collateChromResults = function(outdir) {
 }
 
 # Step 1: load data
-l = loadData(indir, intermediate, usechrom)
+l = loadData(indir, intermediate)
 betas = l[[1]]
 beta.ses = l[[2]]
 sigRows = l[[3]]
