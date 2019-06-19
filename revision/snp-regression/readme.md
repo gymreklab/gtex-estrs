@@ -64,14 +64,17 @@ aws batch register-job-definition \
 ##### Run AWS jobs #####
 
 ```
-tissue="Nerve-Tibial"
-for chrom in 1 2 3 4 5 6 7 8 9 10 11 12 13 #$(seq 1 20) # 21 22
+TISSUES="Adipose-Subcutaneous Adipose-Visceral Artery-Aorta Artery-Tibial Brain-Caudate Brain-Cerebellum Cells-Transformedfibroblasts Esophagus-Mucosa Esophagus-Muscularis Heart-LeftVentricle Lung Muscle-Skeletal Skin-NotSunExposed Skin-SunExposed Thyroid WholeBlood"
+for tissue in $TISSUES
 do
-cmd="aws batch submit-job \
-    --job-name NerveTibial-${chrom} \
-    --job-queue gtex-small \
-    --job-definition gtex-snpreg-job:3 \
-    --container-overrides 'command=[\"${tissue}\",\"${chrom}\"]'"
-sh -c "${cmd}"
-done 
+  for chrom in $(seq 13 22)
+  do
+  cmd="aws batch submit-job \
+      --job-name ${tissue}-${chrom} \
+      --job-queue gtex-small \
+      --job-definition gtex-snpreg-job:3 \
+      --container-overrides 'command=[\"${tissue}\",\"${chrom}\"]'"
+  sh -c "${cmd}"
+  done 
+done
 ```
