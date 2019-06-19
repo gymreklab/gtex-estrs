@@ -10,12 +10,12 @@ nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/
 # TODO SNPs
 
 # Compute Z-scores
-./compute-mashR-Z.sh /storage/mgymrek/gtex-estrs/revision/mashr/ strs
-./compute-mashR-Z.sh /storage/mgymrek/gtex-estrs/revision/mashr/ snps
-# TODO
+./compute-mashR-Z.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-Z.py /storage/mgymrek/gtex-estrs/revision/mashr/ snps
 
 # Compute significant eSTRs/eSNPs
-# TODO
+./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
 
 ### Notes on inputs/outputs ###
 Examining output and other files:
