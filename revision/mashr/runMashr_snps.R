@@ -22,7 +22,8 @@ workdir = '/storage/mgymrek/gtex-estrs/revision/mashr/'
 indir = paste(workdir, '/input-snps-bychrom/chr', chrom, sep='')
 outdir = paste(workdir, '/output-snps/chr', chrom, sep='')
 intermediate = paste(workdir, '/intermediate-snps-bychrom/chr', chrom, sep='')
-modeldir = paste(workdir, '/intermediate-snps-bychrom/chr1', sep='')
+#modeldir = paste(workdir, '/intermediate-snps-bychrom/chr1', sep='')
+modeldir = paste(workdir, '/intermediate-strs', sep='') # TODO remove
 
 loadData = function(indir, intermediate) {
     print('----Load the data into two dataframes----')
