@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 
+chunksize = 10000
+
 library('purrr')
 library(mashr)
 library(foreach)
@@ -10,7 +12,7 @@ args = commandArgs(trailingOnly=TRUE)
 
 if(length(args)==0){
     print("No arguments supplied.")
-    runval = "test"
+    stop("specify chrom")
 }else{
     for(i in 1:length(args)){
          eval(parse(text=args[[i]]))
@@ -19,9 +21,10 @@ if(length(args)==0){
 
 workdir = '/storage/mgymrek/gtex-estrs/revision/mashr/'
 
-indir = paste(workdir, '/input-', runval, sep='')
-outdir = paste(workdir, '/output-', runval, sep='')
-intermediate = paste(workdir, '/intermediate-', runval, sep='')
+indir = paste(workdir, '/input-snps-bychrom/chr', chrom, sep='')
+outdir = paste(workdir, '/output-snps/chr', chrom, sep='')
+intermediate = paste(workdir, '/intermediate-snps-bychrom/chr', chrom, sep='')
+modeldir = paste(workdir, '/intermediate-snps-bychrom/chr1', sep='')
 
 loadData = function(indir, intermediate) {
     print('----Load the data into two dataframes----')
@@ -95,48 +98,26 @@ loadData = function(indir, intermediate) {
     return(list(betas, beta.ses, sigRows, naRows))
 }
 
-prepMashr = function(betas, beta.ses, sigRows, naRows, intermediate) {
-    print('----prep mashr----')
-    library(mashr)
-    #For overall coding pattern, look at this vignette:
-    #https://stephenslab.github.io/mashr/articles/intro_mash.html
-
-    #1)hand the data off to mashr
-    prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
-    mashrData = mash_set_data(prep$Bhat[!naRows,], prep$Shat[!naRows,])
-    sample_corr = estimate_null_correlation_simple(mashrData)
-    mashrData = mash_update_data(mashrData, V=sample_corr)
-
-    # Prepare other mashR matrices
-    mashrDataStrong = mash_set_data(prep$Bhat[sigRows, ], prep$Shat[sigRows, ], V=sample_corr)
-    mashrDataAll = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
-
-    #1.5)
-    #account for correlation among samples
-    saveRDS(sample_corr, paste(intermediate, '/sample_corr.rds', sep=''))
-
-    #run pca then extreme deconvolution to learn effect patterns from the significant data
-    if (runval == "test") {
-      num_components = 2
-    } else {
-      num_components = 5
+runMashrChunks = function(betas, beta.ses, sample_corr, fittedG, outdir, chunksize) {
+    print('---running mashr by chunk---')
+    registerDoMC(20) # Number of cores to use
+    numchunks = ceiling(nrow(betas)/chunksize)
+    foreach (idx=1:numchunks) %dopar% {
+        print(paste('starting chunk ', idx, sep=''))
+        maxval = (idx*chunksize)
+        if (maxval > nrow(betas)) {
+            maxval = nrow(betas)
+        }
+        rows=((idx-1)*chunksize+1):maxval
+        chunkBetas = betas[rows,]
+        chunkBeta.ses = beta.ses[rows,]
+        prep = list(Bhat=data.matrix(chunkBetas), Shat=data.matrix(chunkBeta.ses))
+        chunkMashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
+        runMashr(chunkMashrData, fittedG, outdir, idx)
     }
-    pca_cov_matrices = cov_pca(mashrDataStrong, num_components)
-    ed_cov_matrices = cov_ed(mashrDataStrong, pca_cov_matrices) #?? what does this step do?
-    canonical_cov_matrices = cov_canonical(mashrData)
-
-    cov_matrices = c(canonical_cov_matrices, ed_cov_matrices)
-
-    #3)fit the model and save its output
-    mashrModel = mash(mashrData, cov_matrices, outputlevel = 1)
-    fittedG = get_fitted_g(mashrModel)
-    saveRDS(fittedG, paste(intermediate, '/fittedG.rds', sep=''))	
-
-    return(list(mashrDataAll, fittedG, sample_corr))
 }
 
-
-runMashr = function(mashrData, fittedG, outdir) {
+runMashr = function(mashrData, fittedG, outdir, name) {
 	print(paste('----run mashr with outdir ', outdir, '----', sep=''))
 	library(mashr)
 
@@ -144,38 +125,19 @@ runMashr = function(mashrData, fittedG, outdir) {
 	saveRDS(mashrOutput, paste(outdir, '/mashrOutput.rds', sep=''))
 
 	lfsr = get_lfsr(mashrOutput)
-	write.table(lfsr, paste(outdir, '/posterior_lfsr.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(lfsr, paste(outdir, '/posterior_lfsr_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	posterior_betas = get_pm(mashrOutput)
-	write.table(posterior_betas, paste(outdir, '/posterior_betas.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(posterior_betas, paste(outdir, '/posterior_betas_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	posterior_beta_ses = get_psd(mashrOutput)
-	write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	log10bf = get_log10bf(mashrOutput)
 	rownames(log10bf) = rownames(posterior_beta_ses)
-	write.table(log10bf, paste(outdir, '/posterior_log10bf.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(log10bf, paste(outdir, '/posterior_log10bf_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 }
 
-runMashrChromByChrom = function(betas, beta.ses, sample_corr, fittedG, outdir) {
-	print('---running mashr chrom by chrom---')
-	#paralellize this process
-	registerDoMC(23) #number of cores allotted
-
-	chroms = paste("chr", c(1:22, 'X'), sep='')
-	foreach (idx = 1:length(chroms)) %dopar% {
-		chrom = chroms[idx]
-		rows = grepl(paste(chrom, '_', sep=''), rownames(betas), fixed=TRUE)
-		if (!any(rows)) {
-			#in some tests, not all chromosomes will be present
-			next
-		}
-		chromBetas = betas[rows, ]
-		chromBeta.ses = beta.ses[rows, ]
-		prep = list(Bhat = data.matrix(chromBetas), Shat = data.matrix(chromBeta.ses))
-		chromMashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
-		chromOutdir = paste(outdir, chrom, sep='/')
-		dir.create(chromOutdir, showWarnings = FALSE)
-		runMashr(chromMashrData, fittedG, chromOutdir)
-	}
-}
+# Step 0: Load precomputed model
+fittedG = readRDS(paste(modeldir, '/fittedG.rds', sep=''))
+sample_corr = readRDS(paste(modeldir, '/sample_corr.rds', sep=''))
 
 # Step 1: load data
 l = loadData(indir, intermediate)
@@ -188,19 +150,10 @@ naRows = l[[4]]
 #sigRows = readRDS(paste(intermediate, '/sigRows.rds', sep=''))
 #naRows = readRDS(paste(intermediate, '/naRows.rds', sep=''))
 
-# Step 2: Prep mashR
-l = prepMashr(betas, beta.ses, sigRows, naRows, intermediate)
-mashrData = l[[1]]
-fittedG = l[[2]]
-sample_corr = l[[3]]
-
-if (runval == "snps-bychrom/chr1") {
-   stop("Done writing model. Not computing posteriors")
-}
+# Step 2: Prepare mashR data using precomputed model
+prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
+mashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
 
 # Step 3: Run mashR
-if (runval == "test") {
-  runMashr(mashrData, fittedG, outdir)
-} else {
-  runMashrChromByChrom(betas, beta.ses, sample_corr, fittedG, outdir)
-}
+runMashrChunks(betas, beta.ses, sample_corr, fittedG, outdir, chunksize) 
+

@@ -1,34 +1,25 @@
-How to run:
+### How to run ###
 
+# Prepare input data
 ./gatherData.sh
-nohup R CMD BATCH runMashr.R terminalOutputFile.txt &
-#to follow along with what's happening
-tail -f terminalOutputFile.txt 
 
-Examining output and other files:
-outputDirectory/output - contains tsvs of the four posterior calculations
-	(betas, beta_ses, lfsr and log10 of the bayes factors),
-	plus individual directories per chromosome
-outputDirectory/input - a cleaned copy made of the data the script is using
-outputDirectory/intermediate - intermediate R objects generated during
-	running runMashr.R - useful for resuming from an intermediate state
-	or inspecting what's going on
+# Run - STRs
+nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
 
-If you wish to change the output directory:
-Change the workdir variable on line 71 of gatherData.sh
-Change the workdir variable on line 12 of runMashr.r
+# Run - SNPs
+# Learn model on chr1
+nohup R CMD BATCH '--args runval="snps-bychrom/chr1"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-snps-bychrom/chr1/mashr.model.log &
+# Run all chroms separately, using chr1 model, in chunks of 10000 - TODO
+nohup ./run_mashr_snps.sh &
 
-If you wish to change the input directory:
-Change the tissuedir variable on line 96 of gatherData.sh
-Possibly change line 98 of gatherData.sh - either
-	pointing the cat command to the correct files,
-	or making sure that awk is pulling out the correct
-	columns (gene, chrom, str.id, beta, beta_se)
+# Collate by chrom
+./collate-chroms.sh /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./collate-chroms.sh /storage/mgymrek/gtex-estrs/revision/mashr/ snps
 
-If you wish to work on the extreme deconvolution bug:
-Beginning at line 44, here's what I think the code should be
-#Notice all=TRUE is uncommented
-allData = purrr::reduce(dataFrameList, function(df1, df2) base::merge(df1, df2, by=c('gene', 'chrom', 'str.id'), all=TRUE))     #comment out this line to keep NAs instead of zeros for STRs with results in only some tissues
-#by default, missing data is NA, set it to something small and irrelevant
-allData[is.na(allData)] = 1e-7
+# Compute Z-scores
+./compute-mashR-Z.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-Z.py /storage/mgymrek/gtex-estrs/revision/mashr/ snps
 
+# Compute significant eSTRs/eSNPs
+./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
+./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ snps
