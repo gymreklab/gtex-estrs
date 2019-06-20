@@ -2,6 +2,9 @@
 
 # ./RunESTRAnova.py --sigsnps /storage/mgymrek/gtex-estrs/revision/mashr/output-snps/sig-bytissue/Adipose-Subcutaneous-estrs.tsv --sigstrs /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/sig-bytissue/Adipose-Subcutaneous-estrs.tsv --samples /storage/mgymrek/gtex-estrs/revision/samples/Adipose-Subcutaneous.samples --strgt /storage/mgymrek/gtex-estrs/revision/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision//genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --chrom chr21 --out test.tab --expr /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Review_Rerun/Adipose-Subcutaneous/Corr_Expr.csv
 
+import warnings
+warnings.filterwarnings("ignore")
+
 import argparse
 import gzip
 import math
@@ -106,9 +109,13 @@ if __name__ == "__main__":
         str_genotypes = LoadGenotypes(args.strgt, str_gt_ind, args.chrom, str_pos)
         snp_genotypes = LoadGenotypes(args.snpgt, snp_gt_ind, args.chrom, snp_pos)
         if str_genotypes is None or snp_genotypes is None:
-            PROGRESS("Error processing %s"%gene)
+            PROGRESS("Error processing %s. Could not find STR or SNP genotypes"%gene)
             continue
-        expr_vals = expr.loc[gene]
+        try:
+            expr_vals = expr.loc[gene]
+        except KeyError:
+            PROGRESS("Error processing %s. No expression data present"%gene)
+            continue            
         genedata = pd.DataFrame({"expr": expr_vals, "SNP": snp_genotypes, "STR": str_genotypes})
         genedata = genedata[~np.isnan(genedata["STR"]) & ~np.isnan(genedata["SNP"]) & ~np.isnan(genedata["expr"])]
         formula_snpstr = "expr ~ STR+SNP"
