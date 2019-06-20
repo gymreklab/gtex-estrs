@@ -23,6 +23,7 @@ def LoadSamples(samplesfile):
 # Quickly load for small gene sets
 def LoadReg(zfile, tissue, zthresh, genes, prefix="", tempdir="/tmp"):
     if len(genes) > 0:
+        PROGRESS("Subsetting reg file to %s genes\n"%len(genes))
         # Write gene list to a file
         with open(os.path.join(tempdir, "genelist.txt"), "w") as f:
             for gene in genes: f.write(gene+"\n")
@@ -119,7 +120,8 @@ def RunCAVIAR(gene, tmpdir, numcausal):
 # Write output
 # ["gene", "top_snp", "top_snp_score", "top_str", "top.str.score", "str.rank", "num.snps"]
 def WriteOutput(outfile, gene, tmpdir):
-    cav = pd.read_csv(os.path.join(tmpdir, gene, "CAVIAR_post"), sep="\t", names=["variant", "x","posterior"])
+    cav = pd.read_csv(os.path.join(tmpdir, gene, "CAVIAR_post"), sep="\t")
+    cav.columns = ["variant", "x","posterior"]
     cav = cav.sort_values("posterior", ascending=False)
     cav["rank"] = [item+1 for item in range(cav.shape[0])]
     cav_snp = cav[cav["variant"].apply(lambda x: "SNP" in x)].sort_values("posterior", ascending=False)
@@ -130,10 +132,12 @@ def WriteOutput(outfile, gene, tmpdir):
               cav_snp.shape[0]]
     output = [str(item) for item in output]
     outfile.write("\t".join(output)+"\n")
+    outfile.flush()
 
 # Write log of failed genes
 def WriteLog(logfile, gene):
     logfile.write("Failed: %s\n"%gene)
+    logfile.flush()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run CAVIAR on GTEx data")
@@ -157,12 +161,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Get list of genes to process
-    if args.genes == "all":
-        genes = []
+    if args.genes != "all":
+        genes = set(args.genes.split(","))
     elif args.genes_file is not None:
         genes = [item.strip() for item in open(args.genes_file, "r").readlines()]
     else:
-        genes = set(args.genes.split(","))
+        genes = []
 
     if not args.precomputed:
         PROGRESS("\nLoad strs regression")
@@ -184,7 +188,9 @@ if __name__ == "__main__":
     # Prepare outputs
     outfile = open(args.out, "w")
     outfile.write("\t".join(["gene", "top_snp", "top_snp_score", "top_str", "top.str.score", "str.rank","num.snps"])+"\n")
+    outfile.flush()
     logfile = open(args.out+".log", "w")
+    logfile.flush()
 
     # For each gene:
     # 1. Get intermediate files
