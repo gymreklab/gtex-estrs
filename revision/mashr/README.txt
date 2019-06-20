@@ -7,10 +7,10 @@
 nohup R CMD BATCH '--args runval="strs"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/mashr.strs.log &
 
 # Run - SNPs
-# Learn model on chr1 - TODO
+# Learn model on chr1
 nohup R CMD BATCH '--args runval="snps-bychrom/chr1"' runMashr.R /storage/mgymrek/gtex-estrs/revision/mashr/output-snps-bychrom/chr1/mashr.model.log &
 # Run all chroms separately, using chr1 model - TODO
-nohup ./run_mashr_snps.sh &
+./run_mashr_snps.sh
 
 # Collate by chrom
 ./collate-chroms.sh /storage/mgymrek/gtex-estrs/revision/mashr/ strs

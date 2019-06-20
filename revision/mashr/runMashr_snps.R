@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 
+chunksize = 10000
+
 library('purrr')
 library(mashr)
 library(foreach)
@@ -22,8 +24,7 @@ workdir = '/storage/mgymrek/gtex-estrs/revision/mashr/'
 indir = paste(workdir, '/input-snps-bychrom/chr', chrom, sep='')
 outdir = paste(workdir, '/output-snps/chr', chrom, sep='')
 intermediate = paste(workdir, '/intermediate-snps-bychrom/chr', chrom, sep='')
-#modeldir = paste(workdir, '/intermediate-snps-bychrom/chr1', sep='')
-modeldir = paste(workdir, '/intermediate-strs', sep='') # TODO remove
+modeldir = paste(workdir, '/intermediate-snps-bychrom/chr1', sep='')
 
 loadData = function(indir, intermediate) {
     print('----Load the data into two dataframes----')
@@ -97,8 +98,21 @@ loadData = function(indir, intermediate) {
     return(list(betas, beta.ses, sigRows, naRows))
 }
 
+runMashrChunks = function(betas, beta.ses, sample_corr, fittedG, outdir, chunksize) {
+    print('---running mashr by chunk---')
+    registerDoMC(20)
+    numchunks = ceiling(nrow(betas)/chunksize)
+    foreach (idx=1:numchunks) %dopar% {
+        rows=((idx-1)*chunksize+1):(idx*chunksize)
+        chunkBetas = betas[rows,]
+        chunkBeta.ses = beta.ses[rows,]
+        prep = list(Bhat=data.matrix(chunkBetas), Shat=data.matrix(chunkBeta.ses))
+        chunkMashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
+        runMashr(chunkMashrData, fittedG, outdir, idx)
+    }
+}
 
-runMashr = function(mashrData, fittedG, outdir) {
+runMashr = function(mashrData, fittedG, outdir, name) {
 	print(paste('----run mashr with outdir ', outdir, '----', sep=''))
 	library(mashr)
 
@@ -106,14 +120,14 @@ runMashr = function(mashrData, fittedG, outdir) {
 	saveRDS(mashrOutput, paste(outdir, '/mashrOutput.rds', sep=''))
 
 	lfsr = get_lfsr(mashrOutput)
-	write.table(lfsr, paste(outdir, '/posterior_lfsr.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(lfsr, paste(outdir, '/posterior_lfsr_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	posterior_betas = get_pm(mashrOutput)
-	write.table(posterior_betas, paste(outdir, '/posterior_betas.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(posterior_betas, paste(outdir, '/posterior_betas_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	posterior_beta_ses = get_psd(mashrOutput)
-	write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(posterior_beta_ses, paste(outdir, '/posterior_beta_ses_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 	log10bf = get_log10bf(mashrOutput)
 	rownames(log10bf) = rownames(posterior_beta_ses)
-	write.table(log10bf, paste(outdir, '/posterior_log10bf.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
+	write.table(log10bf, paste(outdir, '/posterior_log10bf_', name, '.tsv', sep=''), sep="\t", col.names=NA, quote=FALSE)
 }
 
 # Step 0: Load precomputed model
@@ -126,11 +140,15 @@ betas = l[[1]]
 beta.ses = l[[2]]
 sigRows = l[[3]]
 naRows = l[[4]]
+#betas = readRDS(paste(intermediate, '/betas.rds', sep=''))
+#beta.ses = readRDS(paste(intermediate, '/beta.ses.rds', sep=''))
+#sigRows = readRDS(paste(intermediate, '/sigRows.rds', sep=''))
+#naRows = readRDS(paste(intermediate, '/naRows.rds', sep=''))
 
 # Step 2: Prepare mashR data using precomputed model
 prep = list(Bhat = data.matrix(betas), Shat = data.matrix(beta.ses))
 mashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
 
 # Step 3: Run mashR
-runMashr(mashrData, fittedG, outdir)
+runMashrChunks(betas, beta.ses, sample_corr, fittedG, outdir, chunksize) 
 
