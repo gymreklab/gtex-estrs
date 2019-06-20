@@ -15,7 +15,7 @@ import sys
 workdir = sys.argv[1]
 prefix = sys.argv[2]
 
-ZTHRESH = 4
+ZTHRESH = 3
 
 # Read in zvals
 zvals = pd.read_csv(os.path.join(workdir, "output-%s"%prefix, "zscores.tsv"), sep="\t", index_col=0)

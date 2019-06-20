@@ -50,7 +50,7 @@ done
 
 for tissue in $tissuetypes; do
     for chrom in $(seq 1 22); do
-	echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-snps/$tissue.table
+	echo "gene,chrom,str.start,beta,significant,beta.se" | sed 's/,/\t/g' > ${workdir}/input-snps-bychrom/chr${chrom}/$tissue.table
 	cat ${datadir}/snpreg/${tissue}_snpreg.tab | grep -v chrom | grep -w chr${chrom} | \
 	    awk -F"\t" '{print $1 "\t" $2 "\t" $4 "\t" $6 "\t" ($9<10**-4) "\t" $7}' >> ${workdir}/input-snps-bychrom/chr${chrom}/$tissue.table
     done
