@@ -132,4 +132,4 @@ mashrData = mash_set_data(prep$Bhat, prep$Shat, V=sample_corr)
 
 # Step 3: Run mashR
 runMashr(mashrData, fittedG, outdir)
-}
+
