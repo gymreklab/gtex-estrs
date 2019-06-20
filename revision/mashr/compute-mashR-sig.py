@@ -37,8 +37,8 @@ for tissue in zvals.columns:
     print("%s: %s gene-level eSTRs"%(tissue, tvals_sig.shape[0]))
     all_estrs = all_estrs.union(set(tvals_sig["ID"]))
     all_genes = all_genes.union(set(tvals_sig["gene"]))
-    tvals_sig["Z"] = tvals_sig[tissue]
-    tvals_sig[["ID","Z"]].to_csv(os.path.join(workdir, "output-%s"%prefix, "sig-bytissue", "%s-estrs.tsv"%tissue), sep="\t", index=False)
+    tvals_sig.index = tvals_sig["ID"]
+    tvals_sig[[tissue]].to_csv(os.path.join(workdir, "output-%s"%prefix, "sig-bytissue", "%s-estrs.tsv"%tissue), sep="\t", index=True)
 
 # Summarize - overall
 print("Sig genes (global best per gene): %s"%sig.shape[0])

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Example
-# ./RunCaviarGTEx.py --linreg_snp /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/SNP_Analysis/Lin_Reg_Out --linreg_str /storage/szfeupe/Runs/650GTEx_estr/Analysis_by_Tissue/Nerve-Tibial/Lin_Reg_Out --samples /storage/mgymrek/gtex-estrs/revision/caviar/samples/Nerve-Tibial.samples --strgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test.tab --genes ENSG00000160213.5 --tmpdir test/ --num-causal 2 --use-topn-snps 10
+# ./RunCaviarGTEx.py --zsnp /storage/mgymrek/gtex-estrs/revision/mashr/output-snps/zscores.tsv --zstr /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/sig-bytissue/WholeBlood-estrs.tsv --tissue WholeBlood --samples /storage/mgymrek/gtex-estrs/revision/samples/WholeBlood.samples  --strgt /storage/mgymrek/gtex-estrs/revision/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision//genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test.tab --genes ENSG00000160213.5 --tmpdir test/ --num-causal 2 --use-topn-snps 10
 
 import argparse
 import gzip
@@ -21,22 +21,31 @@ def LoadSamples(samplesfile):
     return [item.strip() for item in open(samplesfile, "r").readlines()]
 
 # Quickly load for small gene sets
-def LoadReg(linreg, genes, prefix="", tempdir="/tmp"):
-    # Write gene list to a file
-    with open(os.path.join(tempdir, "genelist.txt"), "w") as f:
-        for gene in genes: f.write(gene+"\n")
-    # Grep for the gene or gene list from the linreg file
-    newlinreg = os.path.join(tempdir, os.path.basename(linreg))
-    if os.path.exists(newlinreg):
-        PROGRESS("Warning: Intermediate linreg file %s exists. Overwriting\n"%os.path.join(tempdir, os.path.basename(linreg)))
-    cmd1 = "head -n 1 %s > %s"%(linreg, newlinreg)
-    cmd2 = "grep -f %s %s >> %s"%(os.path.join(tempdir, "genelist.txt"), \
-                                linreg, newlinreg)
-    os.system(cmd1+";"+cmd2)
-    # Open the new reduced regression file
-    reg = pd.read_csv(newlinreg, sep="\t", \
-                      usecols=["gene","chrom","str.start","beta","beta.se","p.wald"])
-    reg["Z"] = reg.apply(lambda x: x["beta"]/x["beta.se"], 1)
+def LoadReg(zfile, tissue, zthresh, genes, prefix="", tempdir="/tmp"):
+    if len(genes) > 0:
+        # Write gene list to a file
+        with open(os.path.join(tempdir, "genelist.txt"), "w") as f:
+            for gene in genes: f.write(gene+"\n")
+        # Grep for the gene or gene list from the linreg file
+        newlinreg = os.path.join(tempdir, os.path.basename(zfile))
+        if os.path.exists(newlinreg):
+            PROGRESS("Warning: Intermediate linreg file %s exists. Overwriting\n"%os.path.join(tempdir, os.path.basename(zfile)))
+        cmd1 = "head -n 1 %s > %s"%(zfile, newlinreg)
+        cmd2 = "grep -f %s %s >> %s"%(os.path.join(tempdir, "genelist.txt"), \
+                                      zfile, newlinreg)
+        os.system(cmd1+";"+cmd2)
+        # Open the new reduced regression file
+        fname = newlinreg
+    else:
+        fname = zfile
+    reg = pd.read_csv(zfile, sep="\t", index_col=0)
+    reg = reg[[tissue]]
+    if abs(zthresh) > 0:
+        reg = reg[abs(reg[tissue])>=abs(zthresh)]
+    reg.columns = ["Z"]
+    reg["str.start"] = [int(item.split("_")[-1]) for item in reg.index]
+    reg["chrom"] = [item.split("_")[1] for item in reg.index]
+    reg["gene"] = [item.split("_")[0] for item in reg.index]
     reg["ID"] = reg.apply(lambda x: prefix+x["chrom"]+":"+str(x["str.start"]), 1)
     return reg
 
@@ -46,8 +55,8 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
                         str_gt_ind, snp_gt_ind, \
                         tmpdir):
     if not os.path.exists(os.path.join(tmpdir, gene)): os.mkdir(os.path.join(tmpdir, gene))
-    strdata = strreg[strreg["gene"]==gene].sort_values("p.wald").head(use_topn_strs).sort_values("str.start")
-    snpdata = snpreg[snpreg["gene"]==gene].sort_values("p.wald").head(use_topn_snps).sort_values("str.start")
+    strdata = strreg[strreg["gene"]==gene].sort_values("Z", ascending=False).head(use_topn_strs).sort_values("str.start")
+    snpdata = snpreg[snpreg["gene"]==gene].sort_values("Z", ascending=False).head(use_topn_snps).sort_values("str.start")
     # 1. Get ZFILE
     zfile = os.path.join(tmpdir, gene, "ZFILE")
     strdata[["ID", "Z"]].to_csv(open(zfile, "w"), header=None, index=False, sep="\t")
@@ -99,6 +108,7 @@ def RunCAVIAR(gene, tmpdir, numcausal):
     if os.path.exists(outfile+"_post"): os.remove(outfile+"_post")
     if os.path.exists(outfile+"_set"): os.remove(outfile+"_set")
     cmd = "CAVIAR -o %s -l %s -z %s -c %s"%(outfile, ldfile, zfile, numcausal)
+    print(cmd)
     p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
     output = p.communicate()[0]
     if p.returncode != 0:
@@ -127,36 +137,49 @@ def WriteLog(logfile, gene):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run CAVIAR on GTEx data")
-    parser.add_argument("--linreg_snp", help="File with snp linear regression output", type=str, required=True)
-    parser.add_argument("--linreg_str", help="File with str linear regression output", type=str, required=True)
+#    parser.add_argument("--linreg_snp", help="File with snp linear regression output", type=str, required=True)
+#    parser.add_argument("--linreg_str", help="File with str linear regression output", type=str, required=True)
+    parser.add_argument("--zsnp", help="File with SNP zscores from mashR", type=str, required=True)
+    parser.add_argument("--zstr", help="File with STR zscores from mashR", type=str, required=True)
+    parser.add_argument("--tissue", help="Tissue to process", type=str, required=True)
     parser.add_argument("--samples", help="File with samples to process for this tissue", type=str, required=True)
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--out", help="Write results to this file", type=str, required=True)
     parser.add_argument("--genes", help="Only process these genes", type=str, default="all")
+    parser.add_argument("--genes-file", help="Only process genes in this file", type=str)
     parser.add_argument("--precomputed", help="Use precomputed input files for CAVIAR", action="store_true")
     parser.add_argument("--use-topn-strs", help="Use top n STRs (by p-value)", type=int, default=1)
     parser.add_argument("--use-topn-snps", help="Use top n SNPs (by p-value)", type=int, default=1000000)
+    parser.add_argument("--zthresh", help="Only consider variants with at least this big of zscore", type=float, default=0)
     parser.add_argument("--num-causal", help="Number of causal variants to consider", type=int, default=3)
     parser.add_argument("--tmpdir", help="Use this directory for temporary files", type=str, default="/tmp")
     args = parser.parse_args()
 
     # Get list of genes to process
-    if args.genes == "all": genes = set(strreg["gene"])
-    else: genes = set(args.genes.split(","))
+    if args.genes == "all":
+        genes = []
+    elif args.genes_file is not None:
+        genes = [item.strip() for item in open(args.genes_file, "r").readlines()]
+    else:
+        genes = set(args.genes.split(","))
 
     if not args.precomputed:
+        PROGRESS("\nLoad strs regression")
+        strreg = LoadReg(args.zstr, args.tissue, args.zthresh, genes, prefix="STR_", tempdir=args.tmpdir)
+
         # Load regression results
         PROGRESS("\nLoad snps regression")
-        snpreg = LoadReg(args.linreg_snp, genes, prefix="SNP_", tempdir=args.tmpdir)
-        PROGRESS("\nLoad strs regression")
-        strreg = LoadReg(args.linreg_str, genes, prefix="STR_", tempdir=args.tmpdir)
+        snpreg = LoadReg(args.zsnp, args.tissue, args.zthresh, genes, prefix="SNP_", tempdir=args.tmpdir)
 
         # Get list of samples to process
         samples = LoadSamples(args.samples)
 
         # Get sample indices for genotype data
         str_gt_ind, snp_gt_ind, samples = GetGenotypeIndices(args.strgt, args.snpgt, samples)
+
+        # Set genes list if not done already
+        if len(genes) == 0: genes = set(strreg["gene"])
 
     # Prepare outputs
     outfile = open(args.out, "w")

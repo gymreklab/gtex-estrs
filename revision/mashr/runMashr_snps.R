@@ -100,10 +100,15 @@ loadData = function(indir, intermediate) {
 
 runMashrChunks = function(betas, beta.ses, sample_corr, fittedG, outdir, chunksize) {
     print('---running mashr by chunk---')
-    registerDoMC(20)
+    registerDoMC(20) # Number of cores to use
     numchunks = ceiling(nrow(betas)/chunksize)
     foreach (idx=1:numchunks) %dopar% {
-        rows=((idx-1)*chunksize+1):(idx*chunksize)
+        print(paste('starting chunk ', idx, sep=''))
+        maxval = (idx*chunksize)
+        if (maxval > nrow(betas)) {
+            maxval = nrow(betas)
+        }
+        rows=((idx-1)*chunksize+1):maxval
         chunkBetas = betas[rows,]
         chunkBeta.ses = beta.ses[rows,]
         prep = list(Bhat=data.matrix(chunkBetas), Shat=data.matrix(chunkBeta.ses))
