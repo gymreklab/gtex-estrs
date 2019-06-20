@@ -51,13 +51,14 @@ def LoadReg(zfile, tissue, zthresh, genes, prefix="", tempdir="/tmp"):
     return reg
 
 # Write LDFILE, ZFILE
-def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
+def GenerateCAVIARFiles(gene, strreg, snpreg, strgt, snpgt, \
                         use_topn_strs, use_topn_snps, \
                         str_gt_ind, snp_gt_ind, \
                         tmpdir):
     if not os.path.exists(os.path.join(tmpdir, gene)): os.mkdir(os.path.join(tmpdir, gene))
     strdata = strreg[strreg["gene"]==gene].sort_values("Z", ascending=False).head(use_topn_strs).sort_values("str.start")
     snpdata = snpreg[snpreg["gene"]==gene].sort_values("Z", ascending=False).head(use_topn_snps).sort_values("str.start")
+    if strdata.shape[0] == 0 or snpdata.shape[0] == 0: return False
     # 1. Get ZFILE
     zfile = os.path.join(tmpdir, gene, "ZFILE")
     strdata[["ID", "Z"]].to_csv(open(zfile, "w"), header=None, index=False, sep="\t")
@@ -69,6 +70,7 @@ def GenerateCAVIARFiles(gene, samples, strreg, snpreg, strgt, snpgt, \
     ldmatrix = np.square(all_genotypes.transpose().corr())
     ldfile = os.path.join(tmpdir, gene, "LDFILE")
     ldmatrix.to_csv(ldfile, header=None, index=False, sep="\t")
+    return True
 
 def GetFloat(value):
     if value == "None": return np.nan
@@ -95,7 +97,7 @@ def LoadGenotypes(gtfile, gtind, regdata):
 def GetGenotypeIndices(strgtfile, snpgtfile, samples):
     str_samples = [item.decode('UTF-8') for item in (gzip.open(strgtfile, "r").readline().strip().split()[2:])]
     snp_samples = [item.decode('UTF-8') for item in gzip.open(snpgtfile, "r").readline().strip().split()[2:]]
-    use_samples = (set(str_samples).intersection(set(snp_samples))).intersection(samples)
+    use_samples = list((set(str_samples).intersection(set(snp_samples))).intersection(samples))
     str_ind = [str_samples.index(item) for item in use_samples]
     snp_ind = [snp_samples.index(item) for item in use_samples]
     return str_ind, snp_ind, use_samples
@@ -109,7 +111,7 @@ def RunCAVIAR(gene, tmpdir, numcausal):
     if os.path.exists(outfile+"_post"): os.remove(outfile+"_post")
     if os.path.exists(outfile+"_set"): os.remove(outfile+"_set")
     cmd = "CAVIAR -o %s -l %s -z %s -c %s"%(outfile, ldfile, zfile, numcausal)
-    print(cmd)
+#    print(cmd)
     p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
     output = p.communicate()[0]
     if p.returncode != 0:
@@ -199,10 +201,12 @@ if __name__ == "__main__":
     for gene in genes:
         PROGRESS("Processing gene %s"%gene)
         if not args.precomputed: # Store in args.tmpdir/gene/ LDFILE, ZFILE
-             GenerateCAVIARFiles(gene, samples, strreg, snpreg, args.strgt, args.snpgt, \
+            if not GenerateCAVIARFiles(gene, strreg, snpreg, args.strgt, args.snpgt, \
                                  args.use_topn_strs, args.use_topn_snps, \
                                  str_gt_ind, snp_gt_ind, \
-                                 args.tmpdir)
+                                 args.tmpdir):
+                WriteLog(logfile, gene)
+                continue
         if not RunCAVIAR(gene, args.tmpdir, args.num_causal):
             WriteLog(logfile, gene)
             continue
