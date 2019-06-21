@@ -10,6 +10,7 @@ TISSUES="Adipose-Subcutaneous Adipose-Visceral Artery-Aorta Artery-Tibial Brain-
 
 for tissue in $TISSUES
 do
+    echo $tissue
     ./BuildMasterTable.py \
 	--hipref $HIPREF \
 	--tissue $tissue \
@@ -19,5 +20,5 @@ do
 	--anova "/storage/mgymrek/gtex-estrs/revision/anova/${tissue}*.tab" \
 	--caviar "/storage/mgymrek/gtex-estrs/revision/caviar/batches/output/${tissue}*.tab" \
 	--geneannot gencode.v7.tab \
-	--out test.tab
+	--out /storage/mgymrek/gtex-estrs/revision/mastertables/${tissue}_master.tab
 done
