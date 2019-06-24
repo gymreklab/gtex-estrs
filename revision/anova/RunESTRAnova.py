@@ -15,6 +15,7 @@ import sys
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
 import tabix
+import scipy.stats
 
 """
 Analyze h2 gain in adding eSTRs vs. eSNPs using ANOVA
@@ -23,15 +24,6 @@ Analyze h2 gain in adding eSTRs vs. eSNPs using ANOVA
 def GetFloat(value):
     if value == "None": return np.nan
     else: return float(value)
-
-def ZNorm(vals):
-    vals = list(vals)
-    vals = [float(x) for x in vals]
-    m = np.mean(vals)
-    sd = math.sqrt(np.var(vals))
-    if sd == 0: return None
-    if np.isnan(sd) or np.isnan(m): return None
-    return [(item-m)*1.0/sd for item in vals]
 
 def LoadEvars(sigfile, chrom):
     data = pd.read_csv(sigfile, sep="\t")
@@ -68,6 +60,19 @@ def LoadGenotypes(gtfile, gtind, chrom, pos):
         return [GetFloat(record[i+2]) for i in gtind]
     return None
 
+def ZNorm(vals):
+    vals = [float(x) for x in list(vals)]
+    m = np.nanmean(vals)
+    sd = math.sqrt(np.nanvar(vals))
+    if sd == 0: return None
+    if np.isnan(sd) or np.isnan(m): return None
+    newvals = []
+    for item in vals:
+        if np.isnan(item):
+            newvals.append(np.nan)
+        else: newvals.append((item-m)*1.0/sd)
+    return newvals
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyzing SNP+STR ANOVA")
     parser.add_argument("--sigsnps", help="File with best SNPs per gene", type=str, required=True)
@@ -77,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument("--strgt", help="File with noramlized STR genotypes", type=str, required=True)
     parser.add_argument("--snpgt", help="File with normalized SNP genotypes", type=str, required=True)
     parser.add_argument("--out", help="Write results to this file", type=str, required=True)
+    parser.add_argument("--mingt", help="Remove STR genotypes with fewer than this many samples", type=int, default=1)
     parser.add_argument("--expr", help="Normalized expression residuals", type=str, required=True)
     args = parser.parse_args()
 
@@ -118,6 +124,19 @@ if __name__ == "__main__":
             continue            
         genedata = pd.DataFrame({"expr": expr_vals, "SNP": snp_genotypes, "STR": str_genotypes})
         genedata = genedata[~np.isnan(genedata["STR"]) & ~np.isnan(genedata["SNP"]) & ~np.isnan(genedata["expr"])]
+        # Remove outlier STR genotypes
+        gtcounts = genedata.groupby("STR", as_index=False).agg({"SNP": len})
+        keepgt = set(gtcounts[gtcounts["SNP"]>=args.mingt]["STR"])
+        print(keepgt)
+        genedata = genedata[genedata["STR"].apply(lambda x: x in keepgt)]
+        # Debug - TODO remove
+        print("STR r: %s"%scipy.stats.pearsonr(genedata["STR"], genedata["expr"])[0])
+        print("SNP r: %s"%scipy.stats.pearsonr(genedata["SNP"], genedata["expr"])[0])
+        print(genedata.groupby("STR", as_index=False).agg({"SNP": len}))
+        # Normalize
+        genedata["STR"] = ZNorm(genedata["STR"])
+        genedata["SNP"] = ZNorm(genedata["SNP"])
+        genedata["expr"] = ZNorm(genedata["expr"])
         formula_snpstr = "expr ~ STR+SNP"
         formula_snp = "expr ~ SNP"
         lm_snpstr = ols(formula_snpstr, genedata).fit()

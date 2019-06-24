@@ -1,33 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-gene
-gene.name
-gene.strand
-chrom
-str.start (hipref)
-str.end (hipref)
-str.motif.forward (hipref)
-str.motif.reverse (hipref)
-str.id
-linreg.beta (linreg)
-linreg.beta.se (linreg)
-linreg.p.wald (linreg)
-linreg.top.str (linreg)
-linreg.n.miss (linreg)
-mashr.beta (mashr)
-mashr.beta.se (mashr)
-mashr.top.str (mashr)
-mashr.top.snp (mashr - get from ANOVA)
-anova.pval (anova)
-anova.qval (anova)
-caviar.str.score (caviar)
-caviar.topsnp (caviar)
-caviar.topsnp.score (caviar)
-caviar.str.rank (caviar)
-significant (mashr - top.str)
-"""
-
 import argparse
 import glob
 import numpy as np

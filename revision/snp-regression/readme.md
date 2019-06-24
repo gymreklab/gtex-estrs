@@ -18,8 +18,8 @@ aws s3 cp /storage/resources/dbase/human/hg19/gencode_gene_annotations_hg19.csv 
 ```
 for chrom in $(seq 1 22)
 do
-	aws s3 cp /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz s3://gtex-estr/snp_gts_chr${chrom}.tab.gz
-	aws s3 cp /storage/mgymrek/gtex-estrs/revision/caviar/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz.tbi s3://gtex-estr/snp_gts_chr${chrom}.tab.gz.tbi
+	aws s3 cp /storage/mgymrek/gtex-estrs/revision/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz s3://gtex-estr/snp_gts_chr${chrom}.tab.gz
+	aws s3 cp /storage/mgymrek/gtex-estrs/revision/genotypes/GTExNormalizedSNPGenotypes_chr${chrom}.table.gz.tbi s3://gtex-estr/snp_gts_chr${chrom}.tab.gz.tbi
 done
 ```
 
@@ -64,10 +64,12 @@ aws batch register-job-definition \
 ##### Run AWS jobs #####
 
 ```
-TISSUES="Adipose-Subcutaneous Adipose-Visceral Artery-Aorta Artery-Tibial Brain-Caudate Brain-Cerebellum Cells-Transformedfibroblasts Esophagus-Mucosa Esophagus-Muscularis Heart-LeftVentricle Lung Muscle-Skeletal Skin-NotSunExposed Skin-SunExposed Thyroid WholeBlood"
+TISSUES="Adipose-Subcutaneous Adipose-Visceral Artery-Aorta Artery-Tibial Brain-Caudate Brain-Cerebellum Cells-Transformedfibroblasts Esophagus-Mucosa Esophagus-Muscularis Heart-LeftVentricle Lung Muscle-Skeletal Nerve-Tibial Skin-NotSunExposed Skin-SunExposed Thyroid WholeBlood"
+
 for tissue in $TISSUES
 do
-  for chrom in $(seq 13 22)
+  #for chrom in $(seq 13 22)
+  for chrom in 3
   do
   cmd="aws batch submit-job \
       --job-name ${tissue}-${chrom} \
