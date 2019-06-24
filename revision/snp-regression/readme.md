@@ -69,7 +69,7 @@ TISSUES="Adipose-Subcutaneous Adipose-Visceral Artery-Aorta Artery-Tibial Brain-
 for tissue in $TISSUES
 do
   #for chrom in $(seq 13 22)
-  for chrom in 3
+  #for chrom in 3
   do
   cmd="aws batch submit-job \
       --job-name ${tissue}-${chrom} \

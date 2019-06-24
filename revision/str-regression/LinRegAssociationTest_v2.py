@@ -28,6 +28,11 @@ MINGENOTYPE = 3
 def PROGRESS(msg):
     sys.stderr.write("%s\n"%msg.strip())
 
+def GetKeepGTs(gtvals, MINGT):
+    gts = set(gtvals)
+    keepgt = [item for item in gts if not np.isnan(item) and str(item) != "None" and gtvals.count(item)>=MINGT]
+    return keepgt
+
 def GetCisSTRs(gtfile, chrom, start, end):
     tb = tabix.open(gtfile)
     records = tb.query(chrom, start-1, end+1)
@@ -49,12 +54,6 @@ def ZNorm(vals):
     sd = math.sqrt(np.var(vals))
     if sd == 0: return None
     return [(item-m)/sd for item in vals]
-
-def GetOutlierLimit(X):  
-    # Remove outlier beyond 2xSD
-    M = np.mean(X)
-    sd= math.sqrt(np.var(X))
-    return M+(5*sd), M-(5*sd)
 
 def LinearRegression(X, Y, norm=False, minsamples=0):
     """
@@ -89,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--norm", help="Normalize genotypes before doing association", action="store_true")
     parser.add_argument("--min-samples", help="Require data for this many samples", type=int, default=0)
     parser.add_argument("--min-genotypes", help="Require this many genotypes per test", type=int, default=3)
+    parser.add_argument("--mingt", help="Remove genotypes with fewer than this many samples", type=int, default=1)
     parser.add_argument("--debug", help="Print debug info", action="store_true")
     args = parser.parse_args()
     EXPRFILE = args.expr
@@ -101,6 +101,7 @@ if __name__ == "__main__":
     NORM = args.norm
     MINSAMPLES = args.min_samples
     MINGENOTYPE = args.min_genotypes
+    MINGT = args.mingt
     if args.scriptdir is not None: SCRIPTDIR = args.scriptdir
     if args.checkchrom: CHECKCHROM = True
     if args.tmpdir is not None: TMPDIR = args.tmpdir
@@ -173,23 +174,19 @@ if __name__ == "__main__":
             locus_y = y.loc[samples_to_keep,:]
             
             
-            #removing samples with outlier genotypes (> mean+/-5*sd)
-            O1,O2 = GetOutlierLimit([float(item) for item in locus_str]) #.iloc[:,0].values]) 
+            # Remove samples with rare genotypes
+            keepgts = GetKeepGTs([float(item) for item in locus_str], MINGT)
             samples_to_keep = [samples_to_keep[k] for k in range(len(samples_to_keep)) \
-                               if locus_str[samples_to_keep[k]]<O1 and \
-                               locus_str[samples_to_keep[k]]>O2]
+                               if locus_str[samples_to_keep[k]] in keepgts]
             locus_str = locus_str[samples_to_keep]
             locus_y = y.loc[samples_to_keep,:]
             
             #ignore locus if number of #genotype <3
             if len(set(locus_str)) < MINGENOTYPE:
                 continue
-            #PROGRESS('After clean up... %s'%str(locus_y.shape))
           
             # Run regression
             beta, beta_se, p = LinearRegression(locus_str, locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)
-#            beta, beta_se, p = LinearRegression([float(item) for item in locus_str.iloc[:,0].values], locus_y["expr"].values, norm=NORM, minsamples=MINSAMPLES)
-#
             # Write output
             if beta is not None:
                 f.write("\t".join(map(str, [gene, CHROM, str_ids[j], starts[j], len(str_samples)-locus_str.shape[0], beta, beta_se, -1, p]))+"\n")
