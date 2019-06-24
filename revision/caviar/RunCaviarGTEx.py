@@ -3,6 +3,9 @@
 # Example
 # ./RunCaviarGTEx.py --zsnp /storage/mgymrek/gtex-estrs/revision/mashr/output-snps/zscores.tsv --zstr /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/sig-bytissue/WholeBlood-estrs.tsv --tissue WholeBlood --samples /storage/mgymrek/gtex-estrs/revision/samples/WholeBlood.samples  --strgt /storage/mgymrek/gtex-estrs/revision/genotypes/GTExNormalizedSTRGenotypes.table.gz --snpgt /storage/mgymrek/gtex-estrs/revision//genotypes/GTExNormalizedSNPGenotypes_chr21.table.gz --out test.tab --genes ENSG00000160213.5 --tmpdir test/ --num-causal 2 --use-topn-snps 10
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import argparse
 import gzip
 import numpy as np
@@ -31,8 +34,8 @@ def LoadReg(zfile, tissue, zthresh, genes, prefix="", tempdir="/tmp"):
             for gene in genes: f.write(gene+"\n")
         # Grep for the gene or gene list from the linreg file
         newlinreg = os.path.join(tempdir, os.path.basename(zfile))
-        if os.path.exists(newlinreg):
-            PROGRESS("Warning: Intermediate linreg file %s exists. Overwriting\n"%os.path.join(tempdir, os.path.basename(zfile)))
+#        if os.path.exists(newlinreg):
+#            PROGRESS("Warning: Intermediate linreg file %s exists. Overwriting\n"%os.path.join(tempdir, os.path.basename(zfile)))
         cmd1 = "head -n 1 %s > %s"%(zfile, newlinreg)
         cmd2 = "grep -f %s %s >> %s"%(os.path.join(tempdir, "genelist.txt"), \
                                       zfile, newlinreg)
@@ -70,7 +73,7 @@ def GetZ(xvals, yvals):
     X = np.array(xvals)
     Y = np.array(yvals)
     X = sm.add_constant(X)
-    mod_ols = sm.OLS(Y, X)
+    mod_ols = sm.OLS(Y, X, missing="drop")
     res_ols = mod_ols.fit()
     return res_ols.params[1]/res_ols.bse[1]
 
@@ -92,8 +95,9 @@ def RecomputeZ(str_genotypes, snp_genotypes, expr, mingt):
     # Recompute SNP zscores
     for i in range(len(snp_genotypes)):
         snp_x = [snp_genotypes[i][k] for k in keep_samples]
-        snp_zscores.append(GetZ(snp_x, expr_y))
-    keep_loci = [0] + [(i+1) for i in range(len(snp_zscores)) if not np.isnan(snp_zcores[i])]
+        if len(set(snp_x))==1: snp_zscores.append(np.nan)
+        else: snp_zscores.append(GetZ(snp_x, expr_y))
+    keep_loci = [0] + [(i+1) for i in range(len(snp_zscores)) if not np.isnan(snp_zscores[i])]
     return str_zscores, snp_zscores, keep_samples, keep_loci
 
 # Write LDFILE, ZFILE
@@ -117,6 +121,7 @@ def GenerateCAVIARFiles(gene, strreg, snpreg, strgt, snpgt, \
         all_genotypes = all_genotypes.iloc[sample_ind, loc_ind]
         strdata["Z"] = str_zscores
         snpdata["Z"] = snp_zscores
+        snpdata = snpdata.iloc[[i-1 for i in loc_ind if i!=0],:] 
     # Z-normalize genotypes and compute LD
     for i in range(all_genotypes.shape[1]):
         all_genotypes.iloc[:,i] = ZNorm(all_genotypes.iloc[:,i])
