@@ -62,9 +62,9 @@ def LoadCaviar(caviarfiles):
     for fname in allfiles:
         df = pd.read_csv(fname, sep="\t")
         dfl.append(df)
-    caviar = pd.concat(dfl, axis=0, ignore_index=True)
-    caviar["str.start"] = caviar["top_str"].apply(lambda x: int(x.split(":")[-1]))
-    caviar["caviar.str.score"] = caviar["top.str.score"]
+    caviar = pd.concat(dfl, axis=0, ignore_index=True) #gene    top_snp top_snp_score   str     str.score       str.rank        num.snps
+    caviar["str.start"] = caviar["str"].apply(lambda x: int(x.split(":")[-1]))
+    caviar["caviar.str.score"] = caviar["str.score"]
     caviar["caviar.str.rank"] = caviar["str.rank"]
     caviar["caviar.topsnp"] = caviar["top_snp"]
     caviar["caviar.topsnp.score"] = caviar["top_snp_score"]
@@ -74,6 +74,37 @@ def LoadCaviar(caviarfiles):
 def LoadGeneAnnot(geneannotfile):
     annot = pd.read_csv(geneannotfile, sep="\t")
     return annot[["gene","gene.name","gene.strand"]]
+
+def CheckCols(data, cols):
+    for col in cols:
+        numNA = sum(data[col].apply(str)=="nan")
+        if numNA > 0:
+            print(data[data[col].apply(str)=="nan"])
+            sys.stderr.write("Error: column %s has %s NA values\n"%(col, numNA))
+            return False
+    return True
+
+def CheckTable(data):
+    # Check no NAs in universal columns
+    if not CheckCols(data, ["gene","chrom","str.start","str.motif.forward","str.motif.reverse"]): return False
+    # If we have caviar, we should have anova and vice versa
+    caviarNA = np.isnan(data["caviar.str.score"])
+    anovaNA = np.isnan(data["anova.pval"])
+    if not all([caviarNA[i] == anovaNA[i] for i in range(data.shape[0])]):
+        print(data[anovaNA != caviarNA])
+        sys.stderr.write("ERROR: Caviar and anova don't match\n")
+        return False
+    # If we have mashr.significant, we should have anova and caviar (unless they exploded?)
+    mashrSig = data["mashr.significant"]
+    if not all ([mashrSig[i] != caviarNA[i] for i in range(data.shape[0])]):
+        print(data[mashrSig[i]==caviarNA[i]])
+        print("ERROR: Missing CAVIAR for mashr.significant loci")
+        return False
+    if not all ([mashrSig[i] != anovaNA[i] for i in range(data.shape[0])]):
+        print(data[mashrSig[i]==anovaNA[i]])
+        print("ERROR: Missing anova for mashr.significant loci")
+        return False
+    return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run CAVIAR on GTEx data")
@@ -94,21 +125,27 @@ if __name__ == "__main__":
     # Load mashR
     mashr = LoadMashr(args.mashr_beta, args.mashr_se)
     data = pd.merge(mashr, hipref[["chrom","str.start","str.end","str.motif.forward","str.motif.reverse"]], on=["chrom","str.start"])
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
 
     # Load linreg
     linreg = LoadLinreg(args.linreg)
     data = pd.merge(data, linreg, on=["gene","str.start"], how="outer")
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
     
     # Load ANOVA
     anova = LoadAnova(args.anova)
     data = pd.merge(data, anova, on=["gene", "str.start"], how="outer")
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
 
     # Load CAVIAR
     caviar = LoadCaviar(args.caviar)
     data = pd.merge(data, caviar, on=["gene","str.start"], how="outer")
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
 
+    # Load gene annotations
     annot = LoadGeneAnnot(args.geneannot)
     data = pd.merge(data, annot, on=["gene"])
 
-    # Output
-    data.sort_values("caviar.str.score", ascending=False).to_csv(args.out, sep="\t", index=False)
+    # Check table and output
+    if CheckTable(data):
+        data.sort_values("caviar.str.score", ascending=False).to_csv(args.out, sep="\t", index=False)

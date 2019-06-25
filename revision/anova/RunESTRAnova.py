@@ -127,20 +127,26 @@ if __name__ == "__main__":
         # Remove outlier STR genotypes
         gtcounts = genedata.groupby("STR", as_index=False).agg({"SNP": len})
         keepgt = set(gtcounts[gtcounts["SNP"]>=args.mingt]["STR"])
-        print(keepgt)
         genedata = genedata[genedata["STR"].apply(lambda x: x in keepgt)]
-        # Debug - TODO remove
-        print("STR r: %s"%scipy.stats.pearsonr(genedata["STR"], genedata["expr"])[0])
-        print("SNP r: %s"%scipy.stats.pearsonr(genedata["SNP"], genedata["expr"])[0])
-        print(genedata.groupby("STR", as_index=False).agg({"SNP": len}))
+#        print("STR r: %s"%scipy.stats.pearsonr(genedata["STR"], genedata["expr"])[0])
+#        print("SNP r: %s"%scipy.stats.pearsonr(genedata["SNP"], genedata["expr"])[0])
+#        print(genedata.groupby("STR", as_index=False).agg({"SNP": len}))
         # Normalize
         genedata["STR"] = ZNorm(genedata["STR"])
         genedata["SNP"] = ZNorm(genedata["SNP"])
         genedata["expr"] = ZNorm(genedata["expr"])
         formula_snpstr = "expr ~ STR+SNP"
         formula_snp = "expr ~ SNP"
-        lm_snpstr = ols(formula_snpstr, genedata).fit()
-        lm_snp = ols(formula_snp, genedata).fit()
+        try:
+            lm_snpstr = ols(formula_snpstr, genedata).fit()
+        except:
+            PROGRESS("Error running snpstr model for gene: %s"%gene)
+            continue
+        try:
+            lm_snp = ols(formula_snp, genedata).fit()
+        except:
+            PROGRESS("Error running SNP only model for gene: %s"%gene)
+            continue            
         anova_results = anova_lm(lm_snp, lm_snpstr)
         pval = anova_results["Pr(>F)"].values[1]
         outitems = [gene, args.chrom+":"+str(str_pos), args.chrom+":"+str(snp_pos), pval]
