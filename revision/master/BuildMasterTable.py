@@ -4,6 +4,7 @@ import argparse
 import glob
 import numpy as np
 import pandas as pd
+import sys
 
 ZTHRESH = 3
 
@@ -79,30 +80,32 @@ def CheckCols(data, cols):
     for col in cols:
         numNA = sum(data[col].apply(str)=="nan")
         if numNA > 0:
-            print(data[data[col].apply(str)=="nan"])
-            sys.stderr.write("Error: column %s has %s NA values\n"%(col, numNA))
+            sys.stderr.write(str(data[data[col].apply(str)=="nan"]))
+            sys.stderr.write("\nError: column %s has %s NA values\n"%(col, numNA))
             return False
     return True
 
 def CheckTable(data):
     # Check no NAs in universal columns
-    if not CheckCols(data, ["gene","chrom","str.start","str.motif.forward","str.motif.reverse"]): return False
+    if not CheckCols(data, ["gene","chrom","str.start", \
+                            "linreg.beta", "mashr.beta", \
+                            "str.motif.forward","str.motif.reverse"]): return False
     # If we have caviar, we should have anova and vice versa
     caviarNA = np.isnan(data["caviar.str.score"])
     anovaNA = np.isnan(data["anova.pval"])
     if not all([caviarNA[i] == anovaNA[i] for i in range(data.shape[0])]):
-        print(data[anovaNA != caviarNA])
-        sys.stderr.write("ERROR: Caviar and anova don't match\n")
+        sys.stderr.write(str(data[anovaNA != caviarNA]))
+        sys.stderr.write("\nERROR: Caviar and anova don't match\n")
         return False
     # If we have mashr.significant, we should have anova and caviar (unless they exploded?)
     mashrSig = data["mashr.significant"]
     if not all ([mashrSig[i] != caviarNA[i] for i in range(data.shape[0])]):
-        print(data[mashrSig[i]==caviarNA[i]])
-        print("ERROR: Missing CAVIAR for mashr.significant loci")
+        sys.stderr.write(str(data[mashrSig[i]==caviarNA[i]]))
+        sys.stderr.write("\nERROR: Missing CAVIAR for mashr.significant loci")
         return False
     if not all ([mashrSig[i] != anovaNA[i] for i in range(data.shape[0])]):
-        print(data[mashrSig[i]==anovaNA[i]])
-        print("ERROR: Missing anova for mashr.significant loci")
+        sys.stderr.write(str(data[mashrSig[i]==anovaNA[i]]))
+        sys.stderr.write("\nERROR: Missing anova for mashr.significant loci")
         return False
     return True
 
