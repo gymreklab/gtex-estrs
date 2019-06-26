@@ -1,7 +1,5 @@
 #!/bin/bash
 
-HIPREF=/storage/resources/dbase/human/hg19/hg19.hipstr_reference_withmotif_stranded.bed
-
 # Get gene annotation file
 ./get_gene_annot.sh > gencode.v7.tab
 
@@ -12,7 +10,7 @@ for tissue in $TISSUES
 do
     echo $tissue
     ./BuildMasterTable.py \
-	--hipref $HIPREF \
+	--hipref /storage/resources/dbase/human/hg19/hg19.hipstr_reference_withmotif_stranded.bed \
 	--tissue $tissue \
 	--linreg /storage/mgymrek/gtex-estrs/revision/strreg/${tissue}_strreg.tab \
 	--mashr-beta /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/posterior_betas.tsv \

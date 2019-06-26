@@ -4,6 +4,7 @@ import argparse
 import glob
 import numpy as np
 import pandas as pd
+import statsmodels.stats.multitest
 import sys
 
 ZTHRESH = 3
@@ -44,14 +45,19 @@ def LoadAnova(anovafiles):
         dfl.append(df)
     anova = pd.concat(dfl, axis=0, ignore_index=True)
     anova["str.start"] = anova["STR"].apply(lambda x: int(x.split(":")[1]))
-    anova.ix[anova["SNP"].apply(str) == "nan","anova.pval"] = -1*np.inf # no SNP available
+    rmrows = (anova["SNP"].apply(str) == "nan") | (np.isnan(anova["anova.pval"]))
+    anova.ix[rmrows,"anova.pval"] = -1*np.inf # no SNP available
+    anova_p = list(anova[~rmrows]["anova.pval"])
+    rejected, anova_q = statsmodels.stats.multitest.fdrcorrection(anova_p)
+    anova["anova.qval"] = np.nan
+    anova.ix[~rmrows, "anova.qval"] = list(anova_q)
     def GetSNP(x):
         try:
             return int(x.split(":")[1])
         except: return -1
     anova["mashr.top.snp"] = anova["SNP"].apply(GetSNP)
     anova["anova.best.snp"] = anova["SNP"]
-    return anova[["gene","str.start","mashr.top.snp","anova.pval","anova.best.snp"]]
+    return anova[["gene","str.start","mashr.top.snp","anova.pval","anova.qval","anova.best.snp"]]
 
 def LoadHipref(hipreffile):
     hipref = pd.read_csv(hipreffile, sep="\t", names=["chrom","str.start","str.end","period","str.motif.forward","str.motif.reverse"])
@@ -78,6 +84,12 @@ def LoadGeneAnnot(geneannotfile):
     annot = pd.read_csv(geneannotfile, sep="\t")
     return annot[["gene","gene.name","gene.strand"]]
 
+def CheckRows(data, numrows):
+    if data.shape[0] != numrows:
+        sys.stderr.write("Incorrect number of rows. %s vs. %s"%(data.shape[0], numrows))
+        return False
+    return True
+
 def CheckCols(data, cols):
     for col in cols:
         numNA = sum(data[col].apply(str)=="nan")
@@ -92,24 +104,20 @@ def CheckTable(data):
     if not CheckCols(data, ["gene","chrom","str.start", \
                             "mashr.beta", \
                             "str.motif.forward","str.motif.reverse"]): return False
-    # If we have caviar, we should have anova and vice versa
-    caviarNA = np.isnan(data["caviar.str.score"])
-    anovaNA = (data["anova.best.snp"]=="NA")
-    if not all([caviarNA[i] == anovaNA[i] for i in range(data.shape[0])]):
-        sys.stderr.write(str(data[anovaNA != caviarNA][["chrom","str.start","gene","caviar.str.score","anova.pval"]]))
-        sys.stderr.write("\nERROR: Caviar and anova don't match\n")
-        return False
-    # If we have mashr.significant, we should have anova and caviar (unless they exploded?)
-    mashrSig = data["mashr.significant"]
-    if not all ([mashrSig[i] != caviarNA[i] for i in range(data.shape[0])]):
-        sys.stderr.write(str(data[mashrSig[i]==caviarNA[i]]))
-        sys.stderr.write("\nERROR: Missing CAVIAR for mashr.significant loci")
-        return False
-    if not all ([mashrSig[i] != anovaNA[i] for i in range(data.shape[0])]):
-        sys.stderr.write(str(data[mashrSig[i]==anovaNA[i]]))
-        sys.stderr.write("\nERROR: Missing anova for mashr.significant loci")
-        return False
     return True
+
+def ComputeGeneFDR(data, gene_fdr):
+    # Get top pval per gene
+    topP = data[~np.isnan(data["linreg.pval"])].groupby("gene", as_index=False).agg({"linreg.pval": min, "linreg.beta": len})
+    topP.columns = ["gene","linreg.top.pval","num.strs"]
+    # Compute qval
+    topP["linreg.adj.pval"] = topP.apply(lambda x: x["linreg.top.pval"]*x["num.strs"], 1)
+    rejected, topP["linreg.qval"] = statsmodels.stats.multitest.fdrcorrection(list(topP["linreg.adj.pval"]))
+    # Merge and set significance column
+    data = pd.merge(data, topP[["gene","linreg.top.pval","num.strs","linreg.qval"]], on=["gene"], how="outer")
+    data["linreg.top.str"] = (data["linreg.pval"]==data["linreg.top.pval"])
+    data["linreg.significant"] = data.apply(lambda x: x["linreg.top.str"] and x["linreg.qval"]<=gene_fdr, 1)
+    return data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run CAVIAR on GTEx data")
@@ -122,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--anova", help="Path to ANOVA files", type=str, required=True)
     parser.add_argument("--caviar", help="Path to CAVIAR files", type=str, required=True)
     parser.add_argument("--geneannot", help="Path to gene annotations", type=str, required=True)
+    parser.add_argument("--gene-fdr", help="Gene-level FDR threshold", type=float, default=0.1)
     args = parser.parse_args()
 
     # Load HipSTR
@@ -131,26 +140,37 @@ if __name__ == "__main__":
     mashr = LoadMashr(args.mashr_beta, args.mashr_se)
     data = pd.merge(mashr, hipref[["chrom","str.start","str.end","str.motif.forward","str.motif.reverse"]], on=["chrom","str.start"])
     if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
+    before_rows = data.shape[0]
 
     # Load linreg
     linreg = LoadLinreg(args.linreg)
     data = pd.merge(data, linreg, on=["gene","str.start"], how="outer")
     if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
+    if not CheckRows(data, before_rows): sys.exit(1)
     
+    # Compute gene-level FDR on linreg
+    data = ComputeGeneFDR(data, args.gene_fdr)
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
+    if not CheckRows(data, before_rows): sys.exit(1)
+
     # Load ANOVA
     anova = LoadAnova(args.anova)
     data = pd.merge(data, anova, on=["gene", "str.start"], how="outer")
     if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
+    if not CheckRows(data, before_rows): sys.exit(1)
 
-    # Load CAVIAR
+    # Load CAVIAR - TODO add back
     caviar = LoadCaviar(args.caviar)
     data = pd.merge(data, caviar, on=["gene","str.start"], how="outer")
-    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(
+    if not CheckRows(data, before_rows): sys.exit(1)
 
     # Load gene annotations
     annot = LoadGeneAnnot(args.geneannot)
     data = pd.merge(data, annot, on=["gene"])
+    if not CheckRows(data, before_rows): sys.exit(1)
 
-    # Check table and output
+    # Output
+    sys.stderr.write("Writing output\n")
     if CheckTable(data):
-        data.sort_values("caviar.str.score", ascending=False).to_csv(args.out, sep="\t", index=False)
+            data.sort_values("caviar.str.score", ascending=False).to_csv(args.out, sep="\t", index=False)
