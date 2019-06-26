@@ -109,7 +109,8 @@ def GenerateCAVIARFiles(gene, strreg, snpreg, strgt, snpgt, \
     if not os.path.exists(os.path.join(tmpdir, gene)): os.mkdir(os.path.join(tmpdir, gene))
     strdata = strreg[strreg["gene"]==gene].sort_values("absZ", ascending=False).head(use_topn_strs).sort_values("str.start")
     snpdata = snpreg[snpreg["gene"]==gene].sort_values("absZ", ascending=False).head(use_topn_snps).sort_values("str.start")
-    if strdata.shape[0] == 0 or snpdata.shape[0] == 0: return False
+    if strdata.shape[0] == 0 or snpdata.shape[0] == 0:
+        return False
     # 1. Get LDFILE for only that set of variants. Reset strdata and snpdata
     str_genotypes, strdata = LoadGenotypes(strgt, str_gt_ind, strdata)
     snp_genotypes, snpdata = LoadGenotypes(snpgt, snp_gt_ind, snpdata)

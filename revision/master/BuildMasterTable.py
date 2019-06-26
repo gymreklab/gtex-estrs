@@ -44,12 +44,14 @@ def LoadAnova(anovafiles):
         dfl.append(df)
     anova = pd.concat(dfl, axis=0, ignore_index=True)
     anova["str.start"] = anova["STR"].apply(lambda x: int(x.split(":")[1]))
+    anova.ix[anova["SNP"].apply(str) == "nan","anova.pval"] = -1*np.inf # no SNP available
     def GetSNP(x):
         try:
             return int(x.split(":")[1])
         except: return -1
     anova["mashr.top.snp"] = anova["SNP"].apply(GetSNP)
-    return anova[["gene","str.start","mashr.top.snp","anova.pval"]]
+    anova["anova.best.snp"] = anova["SNP"]
+    return anova[["gene","str.start","mashr.top.snp","anova.pval","anova.best.snp"]]
 
 def LoadHipref(hipreffile):
     hipref = pd.read_csv(hipreffile, sep="\t", names=["chrom","str.start","str.end","period","str.motif.forward","str.motif.reverse"])
@@ -88,13 +90,13 @@ def CheckCols(data, cols):
 def CheckTable(data):
     # Check no NAs in universal columns
     if not CheckCols(data, ["gene","chrom","str.start", \
-                            "linreg.beta", "mashr.beta", \
+                            "mashr.beta", \
                             "str.motif.forward","str.motif.reverse"]): return False
     # If we have caviar, we should have anova and vice versa
     caviarNA = np.isnan(data["caviar.str.score"])
-    anovaNA = np.isnan(data["anova.pval"])
+    anovaNA = (data["anova.best.snp"]=="NA")
     if not all([caviarNA[i] == anovaNA[i] for i in range(data.shape[0])]):
-        sys.stderr.write(str(data[anovaNA != caviarNA]))
+        sys.stderr.write(str(data[anovaNA != caviarNA][["chrom","str.start","gene","caviar.str.score","anova.pval"]]))
         sys.stderr.write("\nERROR: Caviar and anova don't match\n")
         return False
     # If we have mashr.significant, we should have anova and caviar (unless they exploded?)
