@@ -107,15 +107,18 @@ def CheckTable(data):
     return True
 
 def ComputeGeneFDR(data, gene_fdr):
-    # Get top pval per gene
-    topP = data[~np.isnan(data["linreg.pval"])].groupby("gene", as_index=False).agg({"linreg.pval": min, "linreg.beta": len})
-    topP.columns = ["gene","linreg.top.pval","num.strs"]
+    # Get top eSTR per gene (use Z score)
+    data["linreg.absZ"] = (data["linreg.beta"]/data["linreg.beta.se"]).apply(abs)
+    topP = data[~np.isnan(data["linreg.pval"])].groupby("gene", as_index=False).agg({"linreg.absZ": max, "linreg.pval": min, "linreg.beta": len})
+    topP["linreg.top.absZ"] = topP["linreg.absZ"]
+    topP["linreg.top.pval"] = topP["linreg.pval"]
+    topP["num.strs"] = topP["linreg.beta"]
     # Compute qval
     topP["linreg.adj.pval"] = topP.apply(lambda x: x["linreg.top.pval"]*x["num.strs"], 1)
     rejected, topP["linreg.qval"] = statsmodels.stats.multitest.fdrcorrection(list(topP["linreg.adj.pval"]))
     # Merge and set significance column
-    data = pd.merge(data, topP[["gene","linreg.top.pval","num.strs","linreg.qval"]], on=["gene"], how="outer")
-    data["linreg.top.str"] = (data["linreg.pval"]==data["linreg.top.pval"])
+    data = pd.merge(data, topP[["gene","linreg.top.pval","linreg.top.absZ","num.strs","linreg.qval"]], on=["gene"], how="outer")
+    data["linreg.top.str"] = (data["linreg.absZ"]==data["linreg.top.absZ"])
     data["linreg.significant"] = data.apply(lambda x: x["linreg.top.str"] and x["linreg.qval"]<=gene_fdr, 1)
     return data
 
@@ -159,10 +162,10 @@ if __name__ == "__main__":
     if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
     if not CheckRows(data, before_rows): sys.exit(1)
 
-    # Load CAVIAR - TODO add back
+    # Load CAVIAR
     caviar = LoadCaviar(args.caviar)
     data = pd.merge(data, caviar, on=["gene","str.start"], how="outer")
-    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(
+    if not CheckCols(data, ["chrom","gene","str.start"]): sys.exit(1)
     if not CheckRows(data, before_rows): sys.exit(1)
 
     # Load gene annotations

@@ -23,3 +23,6 @@ nohup ./run_mashr_snps.sh &
 # Compute significant eSTRs/eSNPs
 ./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ strs
 ./compute-mashR-sig.py /storage/mgymrek/gtex-estrs/revision/mashr/ snps
+
+# Identify tissue-specific eSTRs
+./find-tissue-specific.py /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/zscores.tsv /storage/mgymrek/gtex-estrs/revision/mashr/output-strs/tissue-specific
