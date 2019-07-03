@@ -8,8 +8,8 @@ for period in $(seq 1 6)
 do
     /storage/resources/source/homer/bin/annotatePeaks.pl \
 	${STRSETS}/ALLCAUSAL_period${period}.bed \
-	hg19 -size 10000 -hist 5 -bedGraph ${NUCL} > ${OUTDIR}/ALLCAUSAL_nucl_period${period}.bed
+	hg19 -size 1000 -hist 1 -bedGraph ${NUCL} > ${OUTDIR}/ALLCAUSAL_nucl_period${period}.bed
     /storage/resources/source/homer/bin/annotatePeaks.pl \
 	${STRSETS}/ALLSTRs_period${period}.bed \
-	hg19 -size 10000 -hist 5 -bedGraph ${NUCL} > ${OUTDIR}/ALLSTRs_nucl_period${period}.bed
+	hg19 -size 1000 -hist 1 -bedGraph ${NUCL} > ${OUTDIR}/ALLSTRs_nucl_period${period}.bed
 done
