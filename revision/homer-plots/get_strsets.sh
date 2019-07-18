@@ -12,7 +12,7 @@ do
 	grep -v chrom | awk -v"period=$period" '(length($9)==period) {print $1 "\t" $3 "\t" $8}'| \
 	sort | uniq > ${OUTDIR}/ALLSTRs_period${period}.bed
 done
-exit 1
+
 # Get aggregate eSTRs by period
 for period in $(seq 1 6)
 do
@@ -36,4 +36,10 @@ do
 	    '(length($4)==period && $5>=score) {print $1 "\t" $2 "\t" $3}' | \
 	    sort | uniq > ${OUTDIR}/${tissue}_period${period}.bed
     done
-done
+    cat ${MASTER}/${tissue}_master.tab | \
+	csvcut -t -c chrom,str.start,str.end,str.motif.forward,caviar.str.score | \
+	csvformat -T | grep -v chrom | \
+	awk  -v"score=$SCORE" \
+	'($5>=score) {print $1 "\t" $2 "\t" $3}' | \
+	sort | uniq > ${OUTDIR}/${tissue}_ALL.bed
+done 
