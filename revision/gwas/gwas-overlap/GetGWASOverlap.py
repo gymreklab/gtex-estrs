@@ -81,6 +81,17 @@ def GetR2(ld):
         return "%0.3f"%ld**2
     else: return "None"
 
+def GetBestTissue(tissue_info):
+    # Adipose-Visceral_-0.28_0.02;Esophagus-Muscularis_-0.34_0.12
+    best = None
+    best_beta = 0
+    for tinfo in tissue_info.split(";"):
+        tissue, beta, caviar = tinfo.split("_")
+        if abs(float(beta))>=best_beta:
+            best = tissue
+            best_beta = abs(float(beta))
+    return best
+
 def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("--estrs", help="Table of eSTRs", type=str, required=True)
@@ -103,17 +114,28 @@ def main():
     # Get overlap within window
     gwas["window_start"] = (gwas["start"]-args.window).apply(lambda x: max([x, 0]))
     gwas["window_end"] = gwas["start"]+args.window
-    gwas["id"] = gwas.apply(lambda x: ":".join([x["chrom"],str(x["start"]),x["rsid"],x["name"]]), 1)
+    if "chr" not in str(gwas["chrom"].values[0]): gwas["chrom"] = gwas["chrom"].apply(lambda x: "chr%s"%x)
+    gwas["id"] = gwas.apply(lambda x: ":".join([str(x["chrom"]),str(x["start"]),x["rsid"],x["name"]]), 1)
     gwas_bed = pybedtools.BedTool.from_dataframe(gwas[["chrom","window_start","window_end","id"]])
     causal_bed = pybedtools.BedTool.from_dataframe(causal[["chrom","str.start","str.end"]])
-    overlap = gwas_bed.intersect(causal_bed, wa=True, wb=True).to_dataframe()
+    try:
+        overlap = gwas_bed.intersect(causal_bed, wa=True, wb=True).to_dataframe()
+    except pd.errors.EmptyDataError:
+        sys.stderr.write("No overlaps found")
+        sys.exit(1)
     overlap.columns = ["chrom","window_start","window_end","gwas_id","chrom_x","str.start","str.end"]
     overlap["gwas.rsid"] = overlap["gwas_id"].apply(lambda x: x.split(":")[2])
     overlap["gwas.pos"] = overlap["gwas_id"].apply(lambda x: int(x.split(":")[1]))
     overlap["gwas.trait"] = overlap["gwas_id"].apply(lambda x: x.split(":")[3])
     overlap = overlap[["chrom","str.start","gwas.rsid","gwas.pos","gwas.trait"]].drop_duplicates()
 
-    # Put back eSTR data
+    # Candidates file for coloc
+    cdata = pd.merge(overlap, causal[["chrom","str.start","gene.name","gene","tissue_info"]], on=["chrom","str.start"])
+    cdata["rsid"] = cdata["gwas.rsid"]
+    cdata["tissue"] = cdata["tissue_info"].apply(GetBestTissue)
+    cdata[["gene","tissue","rsid","gene.name"]].to_csv(os.path.join(args.outdir, args.prefix+"_candidates.tab"), sep="\t", index=False)
+
+    # Put back eSTR data and collapse genes
     data = pd.merge(overlap, causal[["chrom","str.start","str.end", "score","tissue_info","str.motif.forward","str.motif.reverse","gene.name"]], on=["chrom","str.start"])
     data = data.groupby(["chrom","str.start", "str.end","gwas.rsid","gwas.pos","gwas.trait","str.motif.forward","str.motif.reverse"], as_index=False).agg({"gene.name": concat, "score": max})
 
@@ -139,7 +161,7 @@ def main():
     # Separate table of things with exact overlap
     data["same"] = data.apply(lambda x: x["gwas.pos"]>=(x["str.start"]-2) and x["gwas.pos"]<=(x["str.end"]+2), 1)
     data[data["same"]][["chrom","str.start","str.end","str.motif.forward","str.motif.reverse","score","gene.name","gwas.pos","gwas.rsid","gwas.trait","snp.str.ld"]].to_csv(os.path.join(args.outdir, args.prefix+"_SuppDataset_overlap.tsv"), sep="\t", index=False)
-
+    
     # How many total FM-eSTRs within 50kb?
     print("Total num STRs: %s"%(data[["chrom","str.start"]].drop_duplicates().shape[0]))
     # How many of these have r2>0.1
