@@ -9,7 +9,7 @@ do
     ./GetGWASOverlap.py \
 	--estrs /storage/mgymrek/gtex-estrs/revision/figures/SuppTable_CAVIAR.tsv \
 	--gwas ${filename} --prefix ${trait} \
-	--window 50000 \
+	--window 1000000 \
 	--caviar 0.3 \
 	--outdir /storage/mgymrek/gtex-estrs/revision/coloc/candidates/ \
 	--str ${STRVCF} \

@@ -121,7 +121,7 @@ def main():
     try:
         overlap = gwas_bed.intersect(causal_bed, wa=True, wb=True).to_dataframe()
     except pd.errors.EmptyDataError:
-        sys.stderr.write("No overlaps found")
+        sys.stderr.write("No overlaps found\n")
         sys.exit(1)
     overlap.columns = ["chrom","window_start","window_end","gwas_id","chrom_x","str.start","str.end"]
     overlap["gwas.rsid"] = overlap["gwas_id"].apply(lambda x: x.split(":")[2])
@@ -133,7 +133,8 @@ def main():
     cdata = pd.merge(overlap, causal[["chrom","str.start","gene.name","gene","tissue_info"]], on=["chrom","str.start"])
     cdata["rsid"] = cdata["gwas.rsid"]
     cdata["tissue"] = cdata["tissue_info"].apply(GetBestTissue)
-    cdata[["gene","tissue","rsid","gene.name"]].to_csv(os.path.join(args.outdir, args.prefix+"_candidates.tab"), sep="\t", index=False)
+    cdata = cdata.groupby(["gene","tissue","gene.name"], as_index=False).agg({"rsid": concat})
+    cdata[["gene","tissue","gene.name","rsid"]].to_csv(os.path.join(args.outdir, args.prefix+"_candidates.tab"), sep="\t", index=False)
 
     # Put back eSTR data and collapse genes
     data = pd.merge(overlap, causal[["chrom","str.start","str.end", "score","tissue_info","str.motif.forward","str.motif.reverse","gene.name"]], on=["chrom","str.start"])
