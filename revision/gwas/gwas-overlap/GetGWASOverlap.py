@@ -82,14 +82,15 @@ def GetR2(ld):
     else: return "None"
 
 def GetBestTissue(tissue_info):
-    # Adipose-Visceral_-0.28_0.02;Esophagus-Muscularis_-0.34_0.12
+    # Adipose-Subcutaneous_0.50_0.01_5.727238439277857e-16;Adipose-Visceral_0.42_0.01_2.5816312070383294e-08
     best = None
-    best_beta = 0
+    best_pval = 1
     for tinfo in tissue_info.split(";"):
-        tissue, beta, caviar = tinfo.split("_")
-        if abs(float(beta))>=best_beta:
+        tissue, beta, caviar, pval = tinfo.split("_")
+        pval = float(pval)
+        if pval < best_pval:
             best = tissue
-            best_beta = abs(float(beta))
+            best_pval = pval
     return best
 
 def main():
