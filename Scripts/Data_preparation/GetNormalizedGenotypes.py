@@ -22,10 +22,12 @@ FILTER = False
 def GetGT(gt):
     #print gt
     if gt is None: return None
+    if gt == "": return None
     if str(gt) == "." or str(gt) == "./.": return None #Missing genotype control
     if "|" in gt: return map(int, gt.split("|"))
     elif "/" in gt: return map(int, gt.split("/"))
-    else: return [int(gt), int(gt)] # haploid
+    else: 
+        return [int(gt), int(gt)] # haploid
 
 def SetNone(item, setnull):
     if item == setnull: return None
@@ -155,7 +157,6 @@ if __name__ == "__main__":
         if (FILTER==True) and (record.FILTER != [] ): 
             continue
         else:
-            print record.ID, '   ', record.FILTER, '   ', record.QUAL
             counters["numloci"] = counters["numloci"] + 1
             
             if MINMAF != 0.0:
@@ -170,7 +171,6 @@ if __name__ == "__main__":
             if "chr" not in chrom: chrom = "chr%s"%chrom
             pos = record.POS            
             genotypes = [GetGT(checkgt(record,s)) for s in SAMPLES]
-            print record.ID, ' ', len(genotypes), ' ', record.FORMAT  ###
             
             # This section is checking for minimum num of genotypes and counts/genotype
             gt_sum = [sum(gt) if gt is not None else None for gt in genotypes]
